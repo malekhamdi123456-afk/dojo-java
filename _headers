@@ -9,7 +9,14 @@
   Cross-Origin-Resource-Policy: same-origin
 
 /*.css
+<<<<<<< HEAD
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.js
+  Cache-Control: public, max-age=0, must-revalidate
+=======
   Cache-Control: public, max-age=3600
 
 /*.js
   Cache-Control: public, max-age=3600
+>>>>>>> 48c60a000a2ee76a1671933efaaf2817f7ec8313

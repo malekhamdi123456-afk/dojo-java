@@ -1546,11 +1546,19 @@ Files.delete(p)`, n: `All of these can throw IOException, so wrap them or add th
     story: [
        `When it starts, it shows your tasks with a number in front of each one. Then it waits for you to type a command:`,
       `<code>add Buy rice</code> adds a new task called "Buy rice".<br><code>done 1</code> marks task number 1 as finished.<br><code>quit</code> stops the program.`,
+<<<<<<< HEAD
+            `Here's what using it looks like:<code style="display:block;white-space:pre;padding:10px 12px;margin-top:8px;line-height:1.7">1. [ ] Buy rice
+2. [ ] Study Java
+add | done | quit &gt; done 1
+1. [x] Buy rice
+2. [ ] Study Java</code>`,
+=======
       `Here's what using it looks like:<code style="display:block;white-space:pre;padding:10px 12px;margin-top:8px;line-height:1.7">1. [ ] Buy rice
       2. [ ] Study Java
       add | done | quit &gt; done 1
       1. [x] Buy rice
       2. [ ] Study Java</code>`,
+>>>>>>> 48c60a000a2ee76a1671933efaaf2817f7ec8313
       `The special part: it <b>remembers</b>. Your tasks are saved in a file called <code>tasks.txt</code>. Close the program, run it again tomorrow, and your list is still there. Without the file, everything would vanish the moment the program stops, because variables only live while the program runs.`,
       `You'll build it in 4 small steps: a Task, a list of tasks, saving and loading the file, and finally the command loop that reads what you type.`
     ],
