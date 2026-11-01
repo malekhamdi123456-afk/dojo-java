@@ -2,15 +2,7 @@
 
 A Duolingo-style Java course in a single web page: 34 bite-size stops covering the first four phases of a Java roadmap, laid out as a pixel-art night trail.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-**Live:** https://malekhamdi.github.io/java-night-trail/
-=======
 **Live:** https://malekhamdi123456-afk.github.io/java-night-trail/
->>>>>>> 6ccf254 (Split into html/css/js, add security headers and safer progress loading)
-=======
-**Live:** https://java-nigh-trail.netlify.app/
->>>>>>> 48c60a000a2ee76a1671933efaaf2817f7ec8313
 
 ## What's inside
 
@@ -35,7 +27,7 @@ No build step. Open `index.html` in a browser.
 
 ## Tech
 
-Plain HTML, CSS and JavaScript in one file. The night scene is drawn on a canvas at low resolution and scaled up for the pixel look.
+Plain HTML, CSS and JavaScript (`index.html`, `style.css`, `script.js`), no frameworks and no build step. The night scene is drawn on a canvas at low resolution and scaled up for the pixel look.
 
 ## Security
 
