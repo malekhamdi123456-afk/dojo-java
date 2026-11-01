@@ -2122,6 +2122,8 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- saved progress ---------- */
 const KEY = 'dojo-java.v1';
+// input caps: the longest official solution is ~800 chars, so 8000 per box is roomy, and 43 full boxes still stay under the 500 KB load limit
+const MAX_BUILD = 8000, MAX_ANSWER = 200;
 let S = { xp: 0, steps: {}, ex: {}, q: {}, builds: {}, got: {} };
 // Saved data is treated as untrusted: anything that doesn't match the expected shape is dropped.
 function cleanState(d) {
@@ -2138,12 +2140,16 @@ function cleanState(d) {
   }
   for (const [k, v] of Object.entries(d.ex || {})) if (ID.test(k) && EX.includes(v)) out.ex[k] = v;
   for (const [k, v] of Object.entries(d.q || {})) if (ID.test(k) && Number.isInteger(v) && v >= 0 && v < 10) out.q[k] = v;
-  for (const [k, v] of Object.entries(d.builds || {})) if (ID.test(k) && typeof v === 'string') out.builds[k] = v.slice(0, 20000);
+  for (const [k, v] of Object.entries(d.builds || {})) if (ID.test(k) && typeof v === 'string') out.builds[k] = v.slice(0, MAX_BUILD);
   for (const k of Object.keys(d.got || {})) if (ID.test(k)) out.got[k] = 1;
   return out;
 }
 try { const raw = localStorage.getItem(KEY); if (raw && raw.length < 500000) S = cleanState(JSON.parse(raw)); } catch (e) {}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+let saveWarned = false;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { if (!saveWarned) { saveWarned = true; toast("Can't save progress in this browser"); } }
+}
 
 function award(key, n) {
   if (S.got[key]) return 0;
@@ -2166,24 +2172,23 @@ const isStepDone = (l, s) => !!(S.steps[l.id] && S.steps[l.id][s]);
 const isDone = l => stepsOf(l).every(s => isStepDone(l, s));
 const isStarted = l => !!S.steps[l.id] && Object.keys(S.steps[l.id]).length > 0;
 
-function markStep(l, s) {
-  if (isStepDone(l, s)) return;
+// opening a step earns nothing; xp comes from exercises, quiz answers and finishing the lesson.
+// earned = xp the caller just gave, folded into one toast
+function markStep(l, s, earned = 0) {
+  if (isStepDone(l, s)) { if (earned) toast('+' + earned + ' xp'); return; }
   const wasDone = isDone(l);
   (S.steps[l.id] = S.steps[l.id] || {})[s] = 1;
-  let gained = award(l.id + ':' + s, 5);
-  if (!wasDone && isDone(l)) {
-    gained += award(l.id + ':complete', l.gate ? 60 : 25);
-    save(); refreshAll();
-    toast(l.gate ? 'Gate opened  +' + gained + ' xp' : 'Lantern lit  +' + gained + ' xp', true);
-    return;
-  }
+  let gained = earned;
+  const finished = !wasDone && isDone(l);
+  if (finished) gained += award(l.id + ':complete', l.gate ? 60 : 25);
   save(); refreshAll();
-  if (gained) toast('+' + gained + ' xp');
+  if (finished) toast((l.gate ? 'Gate opened' : 'Lantern lit') + (gained ? '  +' + gained + ' xp' : ''), true);
+  else if (gained) toast('+' + gained + ' xp');
 }
 
 /* ---------- java highlighter ---------- */
 const KW = new Set(('abstract assert boolean break byte case catch char class continue default do double else enum extends final finally float for if implements import instanceof int interface long new package private protected public return short static super switch synchronized this throw throws try void volatile while var record sealed permits yield when true false null').split(' '));
-const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function hl(src) {
   const re = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("""[\s\S]*?"""|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|(@[A-Za-z]+)|\b(\d[\d_]*(?:\.\d+)?[LlFfDd]?)\b|\b([A-Za-z_]\w*)\b/g;
   let out = '', last = 0, m;
@@ -2388,11 +2393,14 @@ function renderStep() {
 
 /* exercises */
 function exId(l, i) { return l.id + '-e' + i; }
+// opening a hint or the solution before finishing uses up that exercise's xp ('peeked' covers older saves)
+const helped = id => !!S.got[id + ':help'] || S.ex[id] === 'peeked';
 function exBadge(id) {
   const st = S.ex[id];
   if (st === 'solved') return '<span class="ex-state">solved</span>';
   if (st === 'built') return '<span class="ex-state">built</span>';
   if (st === 'peeked') return '<span class="ex-state peek">solution seen</span>';
+  if (helped(id)) return '<span class="ex-state peek">no xp</span>';
   return '';
 }
 function fillSolution(c) { return c.replace(/\[\[(.+?)\]\]/g, (m, a) => a.split('|')[0]); }
@@ -2408,14 +2416,14 @@ function renderEx(l, ex, i) {
       if (j % 2 === 0) return hl(p);
       const alts = p.split('|'), w = Math.max(...alts.map(a => a.length)) + 2;
       const val = st === 'solved' ? alts[0] : '';
-      return `<input class="gap ${st === 'solved' ? 'ok' : ''}" id="${id}-g${k++}" data-ans="${esc(p)}" value="${esc(val)}" style="width:${w}ch" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="blank ${k}">`;
+      return `<input class="gap ${st === 'solved' ? 'ok' : ''}" id="${id}-g${k++}" data-ans="${esc(p)}" value="${esc(val)}" style="width:${w}ch" maxlength="${MAX_ANSWER}" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="blank ${k}">`;
     }).join('');
     mid = `<div class="code"><span class="lang">java</span><pre>${inner}</pre></div>
       <div class="ex-actions"><button class="btn small sky px" type="button" data-check="${id}">Check</button></div>`;
   } else if (ex.t === 'out') {
-    mid = codeBox(ex.c) + `<div class="ans"><input id="${id}-in" placeholder="type the exact output" spellcheck="false" autocomplete="off" autocapitalize="off" value="${st === 'solved' ? esc(ex.a[0]) : ''}" class="${st === 'solved' ? 'ok' : ''}" aria-label="Your answer"><button class="btn small sky px" type="button" data-check="${id}">Check</button></div>`;
+    mid = codeBox(ex.c) + `<div class="ans"><input id="${id}-in" placeholder="type the exact output" maxlength="${MAX_ANSWER}" spellcheck="false" autocomplete="off" autocapitalize="off" value="${st === 'solved' ? esc(ex.a[0]) : ''}" class="${st === 'solved' ? 'ok' : ''}" aria-label="Your answer"><button class="btn small sky px" type="button" data-check="${id}">Check</button></div>`;
   } else {
-    mid = `<textarea id="${id}-ta" data-build="${id}" spellcheck="false" placeholder="Write it in IntelliJ, then paste your version here to keep it with your progress (optional).">${esc(S.builds[id] || '')}</textarea>
+    mid = `<textarea id="${id}-ta" data-build="${id}" maxlength="${MAX_BUILD}" spellcheck="false" placeholder="Write it in IntelliJ, then paste your code here. It is saved with your progress, and you need it to mark this as built.">${esc(S.builds[id] || '')}</textarea>
       <div class="ex-actions"><button class="btn small warn px" type="button" data-built="${id}">I built it</button></div>`;
   }
   const solCode = ex.t === 'fill' ? fillSolution(ex.c) : ex.t === 'out' ? null : ex.s;
@@ -2424,6 +2432,7 @@ function renderEx(l, ex, i) {
     <p>${ex.p}</p>
     ${mid}
     <p class="feedback" id="${id}-fb" aria-live="polite"></p>
+    ${st === 'solved' || st === 'built' || helped(id) ? '' : '<p class="ex-note">Opening the hint or the solution means this exercise gives no xp.</p>'}
     <div class="ex-actions">
       <button class="btn ghost small px" type="button" data-hint="${id}" aria-expanded="false">Show hint</button>
       <button class="btn ghost small px" type="button" data-sol="${id}" aria-expanded="false">Show solution</button>
@@ -2444,19 +2453,31 @@ function setEx(l, id, val) {
   const prev = S.ex[id];
   if (prev === 'solved' || prev === 'built') return 0;
   if (prev === 'peeked' && val === 'peeked') return 0;
+  const usedHelp = helped(id);
   S.ex[id] = val;
-  const gained = award(id + ':' + val, val === 'solved' ? 15 : val === 'built' ? 15 : 0);
+  const gained = usedHelp ? 0 : award(id + ':' + val, val === 'solved' ? 15 : val === 'built' ? 15 : 0);
   save();
   const all = l.ex.every((_, i) => S.ex[exId(l, i)]);
-  if (all) markStep(l, 'practice'); else refreshAll();
-  if (gained && !all) toast('+' + gained + ' xp');
-  const card = bodyEl.querySelector(`[data-ex="${id}"]`);
-  if (card) {
-    card.querySelector('.ex-head').innerHTML = card.querySelector('.ex-type').outerHTML + exBadge(id);
-    card.classList.toggle('solved', S.ex[id] === 'solved' || S.ex[id] === 'built');
-  }
+  if (all) markStep(l, 'practice', gained);
+  else { refreshAll(); if (gained) toast('+' + gained + ' xp'); }
+  const fb = document.getElementById(id + '-fb');
+  if (usedHelp && val !== 'peeked' && fb) fb.textContent += ' No xp for this one, since you opened help first.';
+  paintCard(id);
   renderTabs();
   return gained;
+}
+function paintCard(id) {
+  const card = bodyEl.querySelector(`[data-ex="${id}"]`);
+  if (!card) return;
+  card.querySelector('.ex-head').innerHTML = card.querySelector('.ex-type').outerHTML + exBadge(id);
+  card.classList.toggle('solved', S.ex[id] === 'solved' || S.ex[id] === 'built');
+  const note = card.querySelector('.ex-note');
+  if (note && (helped(id) || card.classList.contains('solved'))) note.remove();
+}
+function useHelp(id) {
+  if (S.ex[id] === 'solved' || S.ex[id] === 'built' || helped(id)) return;
+  S.got[id + ':help'] = 1; save();
+  paintCard(id);
 }
 
 function checkEx(id) {
@@ -2509,7 +2530,7 @@ function answer(qi, oi) {
   save();
   const y = bodyEl.scrollTop;
   const all = l.quiz.every((_, i) => S.q[l.id + '-' + i] !== undefined);
-  if (all) markStep(l, 'quiz');
+  if (all) markStep(l, 'quiz', g);
   else if (g) toast('+' + g + ' xp');
   renderStep(); bodyEl.scrollTop = y;
 }
@@ -2533,16 +2554,26 @@ document.addEventListener('click', e => {
     return closeLesson();
   }
   if (t.dataset.check) return checkEx(t.dataset.check);
-  if (t.dataset.hint) return toggle(t, t.dataset.hint + '-hint', 'hint');
+  if (t.dataset.hint) {
+    if (toggle(t, t.dataset.hint + '-hint', 'hint')) useHelp(t.dataset.hint);
+    return;
+  }
   if (t.dataset.sol) {
     const open = toggle(t, t.dataset.sol + '-sol', 'solution');
-    if (open) setEx(cur, t.dataset.sol, 'peeked');
+    if (open) { useHelp(t.dataset.sol); setEx(cur, t.dataset.sol, 'peeked'); }
     return;
   }
   if (t.dataset.built) {
-    const fb = document.getElementById(t.dataset.built + '-fb');
+    const id = t.dataset.built, fb = document.getElementById(id + '-fb'), ta = document.getElementById(id + '-ta');
+    // the page can't run Java, but it can at least ask for something that looks like code
+    const code = ta.value.trim();
+    if (code.replace(/\s+/g, '').length < 20 || !/[;{(]/.test(code)) {
+      fb.className = 'feedback bad'; fb.textContent = 'Paste the code you wrote into the box first, then press "I built it".';
+      return ta.focus();
+    }
+    S.builds[id] = ta.value.slice(0, MAX_BUILD);
     fb.className = 'feedback ok'; fb.textContent = 'Nice. Compare with the solution if you want a second opinion.';
-    return setEx(cur, t.dataset.built, 'built');
+    return setEx(cur, id, 'built');
   }
   if (t.dataset.q !== undefined) return answer(+t.dataset.q, +t.dataset.o);
   if (t.dataset.retake) {
@@ -2571,7 +2602,7 @@ function toggle(btn, id, word) {
 let buildTimer;
 document.addEventListener('input', e => {
   const ta = e.target.closest('[data-build]');
-  if (ta) { clearTimeout(buildTimer); buildTimer = setTimeout(() => { S.builds[ta.dataset.build] = ta.value; save(); }, 400); }
+  if (ta) { clearTimeout(buildTimer); buildTimer = setTimeout(() => { S.builds[ta.dataset.build] = ta.value.slice(0, MAX_BUILD); save(); }, 400); }
   if (e.target.classList.contains('gap')) e.target.classList.remove('ok', 'bad');
 });
 document.addEventListener('keydown', e => {

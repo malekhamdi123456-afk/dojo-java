@@ -36,4 +36,5 @@ The site is fully static: no database, no server code, no forms, no network requ
 - `_headers` sets a strict Content-Security-Policy on Netlify: scripts load only from this site, no inline scripts, no eval, nothing can embed the page in a frame, and the page can't send data anywhere.
 - Plus `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security` and cross-origin isolation headers.
 - Saved progress is validated on load, so tampered localStorage data is ignored instead of breaking the page.
-- Everything the visitor types is escaped before it's shown.
+- Everything the visitor types is escaped before it's shown, and every input has a length cap (8,000 characters per build box), so a giant paste can't overflow saved progress.
+- The same Content-Security-Policy is also set in a `<meta>` tag in `index.html`, so it applies on any host (GitHub Pages ignores `_headers`).

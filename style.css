@@ -150,6 +150,7 @@ footer p{margin:0;max-width:60ch;color:var(--dim);text-shadow:0 0 4px var(--nigh
 .ex-state{font-family:var(--f-term);font-size:1.05rem;color:var(--leaf);margin-left:auto}
 .ex-state.peek{color:var(--lantern)}
 .ex p{margin:0}
+.ex .ex-note{font-size:.88rem;color:var(--dim)}
 .gap{font-family:var(--f-code);font-size:.88rem;background:#0b2a40;color:#fff;border:0;border-bottom:2px solid var(--sky);padding:0 3px;margin:0 1px;height:1.5em;vertical-align:baseline;outline:none}
 .gap:focus{background:#123a57;border-bottom-color:var(--lantern)}
 .gap.ok{border-bottom-color:var(--leaf);color:var(--leaf);background:rgba(70,242,156,.1)}
