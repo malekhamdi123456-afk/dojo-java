@@ -1544,8 +1544,15 @@ Files.delete(p)`, n: `All of these can throw IOException, so wrap them or add th
   {
     id: 'p3-gate', icon: '門', title: 'Gate: Shrine To-Do', gate: true,
     story: [
-      `Build a to-do app for the terminal that remembers your tasks between runs. Type <code>add Buy rice</code>, <code>done 1</code> or <code>quit</code>. Close the program, open it again: your list is still there.`,
-      `This joins records, ArrayList, files, exceptions and Scanner. It's a small version of how real apps save your data.`
+       `When it starts, it shows your tasks with a number in front of each one. Then it waits for you to type a command:`,
+      `<code>add Buy rice</code> adds a new task called "Buy rice".<br><code>done 1</code> marks task number 1 as finished.<br><code>quit</code> stops the program.`,
+      `Here's what using it looks like:<code style="display:block;white-space:pre;padding:10px 12px;margin-top:8px;line-height:1.7">1. [ ] Buy rice
+      2. [ ] Study Java
+      add | done | quit &gt; done 1
+      1. [x] Buy rice
+      2. [ ] Study Java</code>`,
+      `The special part: it <b>remembers</b>. Your tasks are saved in a file called <code>tasks.txt</code>. Close the program, run it again tomorrow, and your list is still there. Without the file, everything would vanish the moment the program stops, because variables only live while the program runs.`,
+      `You'll build it in 4 small steps: a Task, a list of tasks, saving and loading the file, and finally the command loop that reads what you type.`
     ],
     ex: [
       { t: 'build', p: `<b>Step 1.</b> Make <code>record Task(String text, boolean done)</code> with <code>toLine()</code> (like <code>0;Buy rice</code>) and a static <code>fromLine(String)</code> that turns such a line back into a Task.`, h: `Use ";" as the separator. <code>line.split(";", 2)</code> splits only at the first ";", so the text can contain more.`, s: `record Task(String text, boolean done) {
