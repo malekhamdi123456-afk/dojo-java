@@ -21,6 +21,12 @@ Each world ends with a dungeon gate (a boss project) you build in your IDE.
 - Progress (XP, finished steps, quiz answers) is saved in your browser's localStorage
 - Pick any lesson in any order
 
+## Owner preview
+
+Run the site on your own computer (open `index.html` directly, or a local server on `localhost`) and add `?owner` to the address. A panel appears that moves Gogii through all ten heart shards, plays the shard popups and the curse-breaking cinematic, previews Looka and Suzi (with their spells), and replays the intro. Nothing is saved until you press **Save this**, which makes what you see your real progress in that browser.
+
+Owner mode only switches on for `file://`, `localhost`, `127.0.0.1` and `[::1]`. On the live site `?owner` does nothing, so visitors never see the panel.
+
 ## Run it locally
 
 No build step. Open `index.html` in a browser.

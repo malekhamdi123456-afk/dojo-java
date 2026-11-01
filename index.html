@@ -33,6 +33,24 @@
       <div class="kicker">phases 01 to 04 · the <span class="n-only">night</span><span class="d-only">sakura</span> path</div>
       <h1>Dojo <em>Java</em></h1>
       <p class="lede">The first four phases of your Java roadmap, cut into tiny lessons. Walk the path in order or jump to any lantern you like. Every lesson is the same rhythm, and your progress stays saved in this browser.</p>
+      <div class="buddy px" id="buddy">
+        <canvas class="sprite" id="buddyArt" width="96" height="96" aria-hidden="true"></canvas>
+        <div class="buddy-info">
+          <div class="buddy-name" id="buddyName">Gogii</div>
+          <div class="buddy-form" id="buddyForm"></div>
+          <p class="buddy-line" id="buddyLine"></p>
+          <div class="buddy-bar" aria-hidden="true"><i id="buddyFill"></i></div>
+          <div class="buddy-next" id="buddyNext"></div>
+          <div class="buddy-pick" id="buddyPick" hidden>
+            <button class="pick px" type="button" data-form="looka"><canvas class="sprite" width="96" height="96" data-art="looka" aria-hidden="true"></canvas>Become Looka</button>
+            <button class="pick px" type="button" data-form="suzi"><canvas class="sprite" width="96" height="96" data-art="suzi" aria-hidden="true"></canvas>Become Suzi</button>
+          </div>
+          <div class="owner-row">
+            <button class="btn small px" type="button" id="buddyCast" data-cast-skill="1" hidden></button>
+            <button class="btn ghost small px" type="button" id="buddyFree" data-free="1" hidden>Watch the curse break</button>
+          </div>
+        </div>
+      </div>
       <div class="term px">
         <div class="bar"><i></i><i></i><i></i><span>~/dojo</span></div>
         <pre><span class="ps">$</span> java Dojo
@@ -75,6 +93,30 @@
       <span class="count" id="stepCount"></span>
       <button class="btn small px" id="nextBtn" type="button">Continue</button>
     </div>
+  </div>
+</div>
+<div class="intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="introTitle" hidden>
+  <div class="win intro-win px" style="--notch:8px">
+    <canvas class="sprite big" id="introArt" width="144" height="144" aria-hidden="true"></canvas>
+    <h3 id="introTitle">Meet Gogii</h3>
+    <p>Long ago, an adventurer from Lantern Village climbed to Dragon Keep to face the dragon, and lost. The dragon tore the adventurer's heart into ten shards. All that was left is Gogii: a hollow shade with no face and an empty heart. In this dojo, Gogii is <b>you</b>.</p>
+    <p>Every 100 xp you earn brings one shard back, glowing blue. At 1000 xp the heart is whole, the curse breaks, and you choose who Gogii becomes: <b>Looka</b>, the storm blade, or <b>Suzi</b>, the petal comet.</p>
+    <p id="introXp"></p>
+    <label class="intro-ask" for="nameIn">Your character needs a name. What should we call you?</label>
+    <div class="ans"><input id="nameIn" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Type your name"><button class="btn px" type="button" id="nameGo">That's me</button></div>
+    <p class="feedback bad" id="nameFb" aria-live="polite"></p>
+  </div>
+</div>
+<div class="intro" id="arena" role="dialog" aria-modal="true" aria-labelledby="arenaTitle" hidden>
+  <div class="win intro-win px" style="--notch:8px">
+    <h3 id="arenaTitle"></h3>
+    <canvas class="arena-art" id="arenaArt" width="400" height="260" aria-hidden="true"></canvas>
+    <p class="arena-line" id="arenaLine" aria-live="polite"></p>
+    <div class="buddy-pick" id="arenaPick" hidden>
+      <button class="pick px" type="button" data-form="looka"><canvas class="sprite" width="96" height="96" data-art="looka" aria-hidden="true"></canvas>Become Looka</button>
+      <button class="pick px" type="button" data-form="suzi"><canvas class="sprite" width="96" height="96" data-art="suzi" aria-hidden="true"></canvas>Become Suzi</button>
+    </div>
+    <div class="owner-row"><button class="btn ghost small px" type="button" id="arenaReplay" hidden>Replay</button><button class="btn small px" type="button" id="arenaClose">Close</button></div>
   </div>
 </div>
 <script src="script.js" defer></script>

@@ -256,3 +256,46 @@ footer p{margin:0;max-width:60ch;color:var(--dim);text-shadow:0 0 4px var(--nigh
 /* day: the intro text gets a light glow so it stays readable over the blossoms */
 [data-theme=day] .hero p.lede{text-shadow:0 0 6px rgba(255,250,243,.95),0 0 2px rgba(255,250,243,.95)}
 [data-theme=day] footer p,[data-theme=day] .flow{color:var(--ink)}
+
+/* Gogii, the companion: a cursed shade (or the freed hero) drawn on a canvas at its real pixel size */
+.sprite{width:96px;height:96px;flex:none;image-rendering:pixelated;image-rendering:crisp-edges}
+.sprite.big{width:144px;height:144px}
+@keyframes float{50%{transform:translateY(-6px)}}
+.buddy{display:flex;gap:18px;align-items:center;max-width:560px;background:rgba(10,26,43,.9);border:2px solid var(--line-2);padding:14px 18px;box-shadow:6px 6px 0 rgba(0,0,0,.4)}
+.buddy-info{display:grid;gap:4px;flex:1;min-width:0}
+.buddy-name{font-family:var(--f-pixel);font-weight:700;font-size:1.6rem;line-height:1.1;overflow-wrap:anywhere}
+.buddy-form{font-family:var(--f-term);font-size:1.15rem;color:var(--sky)}
+.buddy-line{margin:0;color:var(--dim);font-size:.95rem;line-height:1.5}
+.buddy-bar{height:10px;margin-top:4px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line)}
+.buddy-bar i{display:block;height:100%;width:0;background:var(--lantern);transition:width .6s cubic-bezier(.65,0,.35,1)}
+.buddy-next{font-family:var(--f-term);font-size:1.05rem;color:var(--faint)}
+.buddy-pick{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.pick{--notch:4px;display:grid;justify-items:center;gap:4px;font-family:var(--f-pixel);font-weight:700;font-size:.9rem;color:var(--ink);background:var(--panel-2);border:0;padding:8px 14px 10px;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 0 0 2px var(--line-2);transition:transform .12s}
+.pick:hover{transform:translateY(-2px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 0 0 2px var(--sky)}
+.pick .sprite{width:72px;height:72px;animation:none}
+.buddy-info .owner-row{margin-top:6px}
+.arena-art{width:100%;max-width:400px;height:auto;image-rendering:pixelated;background:linear-gradient(#0d1730 0%,#1d2b4f 60%,#2a241c 61%);border:2px solid var(--line-2)}
+.intro-win .arena-line{min-height:1.6em;font-family:var(--f-term);font-size:1.3rem;color:var(--lantern)}
+.intro{position:fixed;inset:0;z-index:45;background:rgba(2,6,12,.86);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.intro-win{width:min(560px,100%);height:auto;max-height:100%;overflow-y:auto;padding:24px 22px;display:grid;gap:12px;justify-items:center;text-align:center}
+.intro-win h3{margin:0;font-family:var(--f-pixel);font-weight:700;font-size:2rem;line-height:1.1}
+.intro-win p{margin:0;max-width:46ch;color:var(--dim)}
+.intro-win p:empty{display:none}
+.intro-ask{font-family:var(--f-pixel);font-weight:700;font-size:1.1rem;line-height:1.3;margin-top:6px}
+.intro-win .ans{width:100%;justify-content:center}
+.intro-win .feedback{min-height:0}
+[data-theme=day] .buddy{background:rgba(255,250,243,.92);box-shadow:6px 6px 0 rgba(90,60,45,.22)}
+[data-theme=day] .intro{background:rgba(70,45,40,.5)}
+@media (max-width:560px){.buddy{gap:12px;padding:12px}.buddy .sprite{width:80px;height:80px}.buddy-name{font-size:1.3rem}}
+/* owner preview panel (?owner) */
+.owner{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));z-index:50;width:250px;display:grid;gap:8px;padding:12px 14px;background:var(--panel);border:2px solid var(--lantern);box-shadow:6px 6px 0 rgba(0,0,0,.4);font-size:.85rem}
+.owner b{font-family:var(--f-pixel);font-size:1rem;color:var(--lantern)}
+.owner span,.owner label{color:var(--dim)}
+.owner output{font-family:var(--f-term);font-size:1.2rem;color:var(--ink)}
+.owner input{width:100%;accent-color:var(--lantern)}
+.owner-row{display:flex;flex-wrap:wrap;gap:6px}
+.owner-row a{text-decoration:none}
+@media (max-width:560px){.owner{left:max(12px,env(safe-area-inset-left,0px));width:auto}}
+/* the companion on the map */
+#map{position:relative}
+.pal{position:absolute;width:72px;height:96px;z-index:3;pointer-events:none;image-rendering:pixelated}

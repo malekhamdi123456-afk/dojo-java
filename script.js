@@ -2125,6 +2125,8 @@ const KEY = 'dojo-java.v1';
 // input caps: the longest official solution is ~800 chars, so 8000 per box is roomy, and 43 full boxes still stay under the 500 KB load limit
 const MAX_BUILD = 8000, MAX_ANSWER = 200;
 let S = { xp: 0, steps: {}, ex: {}, q: {}, builds: {}, got: {} };
+// a character name: 1 to 20 letters or numbers, plus inner spaces and ' . _ -
+const validName = s => typeof s === 'string' && s.length <= 20 && s === s.trim() && /^[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N} '._-]*$/u.test(s);
 // Saved data is treated as untrusted: anything that doesn't match the expected shape is dropped.
 function cleanState(d) {
   const out = { xp: 0, steps: {}, ex: {}, q: {}, builds: {}, got: {} };
@@ -2142,18 +2144,35 @@ function cleanState(d) {
   for (const [k, v] of Object.entries(d.q || {})) if (ID.test(k) && Number.isInteger(v) && v >= 0 && v < 10) out.q[k] = v;
   for (const [k, v] of Object.entries(d.builds || {})) if (ID.test(k) && typeof v === 'string') out.builds[k] = v.slice(0, MAX_BUILD);
   for (const k of Object.keys(d.got || {})) if (ID.test(k)) out.got[k] = 1;
+  if (validName(d.name)) out.name = d.name;
+  if (d.form === 'looka' || d.form === 'suzi') out.form = d.form;
+  if (typeof d.at === 'string' && Object.hasOwn(BY_ID, d.at)) out.at = d.at;
   return out;
 }
 try { const raw = localStorage.getItem(KEY); if (raw && raw.length < 500000) S = cleanState(JSON.parse(raw)); } catch (e) {}
+// ?owner opens a sandbox for previewing Gogii, only on the owner's own machine (a local server or the file
+// opened directly); on the live site it never turns on. It only writes progress through its "Save this" button.
+const LOCAL = location.protocol === 'file:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const PREVIEW = LOCAL && new URLSearchParams(location.search).has('owner');
 let saveWarned = false;
 function save() {
+  if (PREVIEW) return;
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch (e) { if (!saveWarned) { saveWarned = true; toast("Can't save progress in this browser"); } }
 }
 
 function award(key, n) {
   if (S.got[key]) return 0;
-  S.got[key] = 1; S.xp += n; return n;
+  const before = stageOf(S.xp);
+  S.got[key] = 1; S.xp += n;
+  const after = stageOf(S.xp);
+  if (after > before) {
+    // let the xp toast finish first, then celebrate the new shard; the tenth one breaks the curse
+    renderBuddy();
+    clearTimeout(award.later);
+    award.later = setTimeout(() => after === ALIVE ? openArena('free') : toast(STAGE_TOASTS[after], true), 2300);
+  }
+  return n;
 }
 
 /* ---------- steps model ---------- */
@@ -2306,6 +2325,7 @@ function refreshAll() {
   const goLabel = !next ? 'Review the trail' : anyStarted ? 'Continue: ' + strip(next.title) : 'Start walking';
   setText('heroGo', goLabel);
   setText('topGo', next ? 'Continue' : 'Review');
+  renderBuddy();
   requestAnimationFrame(drawPaths);
 }
 const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -2329,6 +2349,7 @@ function openLesson(id, step) {
   cur = l;
   const steps = stepsOf(l);
   curStep = Math.max(0, typeof step === 'string' ? steps.indexOf(step) : (step || 0));
+  if (!palWalk && palAt !== id) { parkPal(id); save(); }
   setText('lessonTag', (l.gate ? 'gate ' + (l.pi + 1) : 'stop ' + l.num) + ' · ' + l.phase.world);
   document.getElementById('lessonTitle').innerHTML = l.title;
   setText('lessonPath', `~/dojo/phase-${l.pi + 1}/${l.id.split('-').slice(1).join('-')}.java`);
@@ -2525,8 +2546,11 @@ function answer(qi, oi) {
   const l = cur, key = l.id + '-' + qi;
   if (S.q[key] !== undefined) return;
   S.q[key] = oi;
+  // only a question's first attempt can earn xp, so retaking until right gives nothing
+  const firstTry = !S.got[key + ':tried'];
+  S.got[key + ':tried'] = 1;
   let g = 0;
-  if (oi === l.quiz[qi].a) g = award(key + ':right', 10);
+  if (firstTry && oi === l.quiz[qi].a) g = award(key + ':right', 10);
   save();
   const y = bodyEl.scrollTop;
   const all = l.quiz.every((_, i) => S.q[l.id + '-' + i] !== undefined);
@@ -2539,11 +2563,17 @@ function answer(qi, oi) {
 document.addEventListener('click', e => {
   const t = e.target.closest('button, a');
   if (!t) return;
-  if (t.dataset.open) return openLesson(t.dataset.open, firstOpenStep(BY_ID[t.dataset.open]));
+  if (t.dataset.open) { const id = t.dataset.open; return palGo(id, () => openLesson(id, firstOpenStep(BY_ID[id]))); }
   if (t.id === 'heroGo' || t.id === 'topGo') return goNext();
   if (t.getAttribute('href') === '#map-p1') { e.preventDefault(); document.getElementById('map-p1').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' }); return; }
   if (t.id === 'closeBtn') return closeLesson();
   if (t.id === 'resetBtn') return resetFlow(t);
+  if (t.id === 'nameGo') return submitName();
+  if (t.dataset.form) return chooseForm(t.dataset.form);
+  if (t.dataset.castSkill) return openArena('skill');
+  if (t.dataset.free) return openArena('free');
+  if (t.id === 'arenaClose') return closeArena();
+  if (t.id === 'arenaReplay') return openArena(arena ? arena.kind : 'skill');
   if (!cur) return;
   const steps = stepsOf(cur);
   if (t.dataset.tab !== undefined) { leaveStep(); curStep = +t.dataset.tab; return renderStep(); }
@@ -2606,6 +2636,8 @@ document.addEventListener('input', e => {
   if (e.target.classList.contains('gap')) e.target.classList.remove('ok', 'bad');
 });
 document.addEventListener('keydown', e => {
+  if (!ARENA.hidden) return arenaKeys(e);
+  if (!INTRO.hidden) return introKeys(e);
   if (LW.hidden) return;
   if (e.key === 'Escape') return closeLesson();
   if (e.key === 'Enter' && e.target.matches('.gap, .ans input')) {
@@ -2635,6 +2667,7 @@ function resetFlow(btn) {
   save(); refreshAll();
   btn.textContent = 'Progress erased'; btn.classList.remove('warn');
   setTimeout(() => btn.textContent = 'Reset my progress', 2500);
+  openIntro(); // a fresh start means a fresh, hollow Gogii and a new name
 }
 
 function toast(msg, gold) {
@@ -2662,6 +2695,677 @@ function setupReveal() {
   });
 }
 
+/* ---------- Gogii: a cursed shade whose heart comes back one shard per 100 xp ---------- */
+// Story: an adventurer of Lantern Village lost to the dragon of Dragon Keep, who tore their heart into ten
+// shards. Every 100 xp returns one; at 1000 (around the end of world 1) the curse breaks and you pick a hero.
+const STAGE_XP = 100, ALIVE = 10;
+const stageOf = xp => Math.min(ALIVE, Math.floor(xp / STAGE_XP));
+// all of Gogii's pixel art and animation lives in here: the shade, the curse breaking, Looka and Suzi
+const ART = (() => {
+  const SHADE = [
+    '........................',
+    '..........OOOO..........',
+    '........OOCCCCOO........',
+    '.......OCCCCCCCCO.......',
+    '......OCCCDDDDCCCO......',
+    '......OCCDVVVVDCCO......',
+    '.....OCCDVVVVVVDCCO.....',
+    '.....OCCDVVVVVVDCCO.....',
+    '.....OCCDVVVVVVDCCO.....',
+    '.....OCCCDVVVVDCCCO.....',
+    '....OCCCCCDDDDCCCCCO....',
+    '...OCCCCCCCCCCCCCCCCO...',
+    '..OCCCCCCCCCCCCCCCCCCO..',
+    '..OCCCCCCCCCCCCCCCCCCO..',
+    '..OCDCCCCCCCCCCCCCCDCO..',
+    '.OCCDCCCCCCCCCCCCCCDCCO.',
+    '.OCCDCCCCCCCCCCCCCCDCCO.',
+    '.OCCDCCCCCCCCCCCCCCDCCO.',
+    '.OCCCCCCCCCCCCCCCCCCCCO.',
+    '.OCCCCCCCCCCCCCCCCCCCCO.',
+    '.ODCCCCCCCCCCCCCCCCCCDO.',
+    '.ODDCCDDCCDDCCDDCCDDDDO.',
+    '..ODD.ODDO.ODDO.ODDO.O..',
+    '........................'
+  ];
+  const HEART = ['.HH..HH.', 'HHHHHHHH', 'HHHHHHHH', 'HHHHHHHH', '.HHHHHH.', '..HHHH..', '...HH...'];
+  const HX = 8, HY = 12;
+  const SHADE_COL = { O: '#2f3560', C: '#1a1730', D: '#110f22', V: '#020205' };
+  // heart pixels grouped into 10 shards, clockwise from the top
+  const heartPx = [];
+  HEART.forEach((r, y) => [...r].forEach((c, x) => { if (c === 'H') heartPx.push({ x: x + HX, y: y + HY, a: (Math.atan2(x - 3.5, -(y - 2.6)) + 2 * Math.PI) % (2 * Math.PI) }); }));
+  heartPx.sort((p, q) => p.a - q.a).forEach((p, i, all) => p.shard = Math.floor(i / all.length * 10));
+  const isHeart = (x, y) => heartPx.some(p => p.x === x && p.y === y);
+  const isEdge = (x, y) => isHeart(x, y) && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => !isHeart(x + dx, y + dy));
+  
+  const mix = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+  
+  // draw the shade at pixel size P; stage 0..10; t seconds for the pulse; fx for the freedom animation
+  function drawShade(g, P, stage, t, ox = 0, oy = 0, fx = null) {
+    const pulse = .75 + .25 * Math.sin(t * 2.6);
+    const light = stage / 10;
+    SHADE.forEach((r, y) => [...r].forEach((c, x) => {
+      if (c === '.' || isHeart(x, y)) return;
+      if (fx && fx.gone(x, y)) return;
+      let col = SHADE_COL[c];
+      // the heart's light spills onto the cloak around it
+      const d = Math.hypot(x - 11.5, y - 15);
+      if (c !== 'V' && light) col = mix(col, '#2b4f99', Math.max(0, 1 - d / 9) * light * .7 * pulse);
+      if (fx && fx.crack(x, y)) col = '#9fe8ff';
+      g.fillStyle = col; g.fillRect(ox + x * P, oy + y * P, P, P);
+    }));
+    // heart: empty slots first, then lit shards with glow
+    heartPx.forEach(p => {
+      const lit = p.shard < stage;
+      if (lit) return;
+      g.fillStyle = isEdge(p.x, p.y) ? (((p.x + p.y) % 2) ? '#2a4a7a' : '#1c3156') : '#0a1222';
+      g.fillRect(ox + p.x * P, oy + p.y * P, P, P);
+    });
+    if (stage > 0) {
+      g.save();
+      g.shadowColor = '#4fb8ff';
+      g.shadowBlur = P * (1.2 + stage * .45) * pulse * (fx ? fx.boost : 1);
+      heartPx.forEach(p => {
+        if (p.shard >= stage) return;
+        const core = Math.hypot(p.x - 11.5, p.y - 14.5) < 2.2;
+        g.fillStyle = core ? '#d6f6ff' : isEdge(p.x, p.y) ? '#2f86e6' : '#6cc7ff';
+        g.fillRect(ox + p.x * P, oy + p.y * P, P, P);
+      });
+      g.restore();
+    }
+  }
+  // the curse breaking at 1000 xp: the heart flares, light cracks the cloak, it shatters into sparks, a white flash
+  const rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+  const cloakPx = []; SHADE.forEach((r, y) => [...r].forEach((c, x) => { if (c !== '.' && !isHeart(x, y)) cloakPx.push({ x, y, k: rnd(), u: rnd() }); }));
+  const cloakAt = new Map(cloakPx.map(p => [p.x + ',' + p.y, p]));
+  function freeFrame(g, W, H, e, t, run, dt) {
+    const P = 8, ox = (W - 24 * P) / 2, oy = H - 24 * P - 10 + Math.round(Math.sin(t * 1.6) * 3);
+    const crackT = Math.max(0, (e - 1.2) / 1), goneT = Math.max(0, (e - 2.2) / 1.2);
+    const fx = {
+      boost: 1 + Math.min(1, e / 1.2) * 1.5 + (e < 1.2 ? .6 * Math.max(0, Math.sin(e * 15)) : 0),
+      crack: (x, y) => cloakAt.get(x + ',' + y)?.k < crackT * .9,
+      gone: (x, y) => cloakAt.get(x + ',' + y)?.k < goneT
+    };
+    if (e < 4.2) drawShade(g, P, 10, t, ox, oy - Math.max(0, e - 2.6) * 18, fx);
+    cloakPx.forEach(p => { if (p.k < goneT && !run.out.has(p)) { run.out.add(p); run.parts.push({ x: ox + p.x * P, y: oy + p.y * P, vx: (p.u - .5) * 40, vy: -40 - p.u * 60, life: 1.4 }); } });
+    run.parts.forEach(q => { q.x += q.vx * dt; q.y += q.vy * dt; q.life -= dt; });
+    run.parts = run.parts.filter(q => q.life > 0);
+    g.save(); g.shadowColor = '#4fb8ff'; g.shadowBlur = 12;
+    run.parts.forEach(q => { g.globalAlpha = Math.max(0, q.life / 1.4); g.fillStyle = '#9fe8ff'; g.fillRect(q.x, q.y, 6, 6); });
+    g.restore();
+    if (e > 3.6 && e < 4.6) { g.fillStyle = `rgba(220,246,255,${(1 - Math.abs(e - 4.1) / .5) * .9})`; g.fillRect(0, 0, W, H); }
+    return e < 1.2 ? 'The tenth shard locks in...' : e < 3.6 ? 'The curse is cracking...' : '"I can finally be free."';
+  }
+
+  // 20x38 adventurer sprites, written as left halves (10 cols) and mirrored; asymmetric bits added after
+  const mirror = half => half.map(r => r + [...r].reverse().join(''));
+  const LOOKA_HALF = [
+    '.......k..',
+    '..k...kk.k',
+    '..kk.kkk.k',
+    '...kkkkkkk',
+    '...kkkkkkk',
+    '...kkKkkkk',
+    '...kkkkkKk',
+    '...kksskks',
+    '...kseesss',
+    '...ksipsss',
+    '...kssssss',
+    '....ssssss',
+    '.....sssss',
+    '......ssss',
+    '.....rrrrr',
+    '..jjjrrrrr',
+    '.jjjjjjnnn',
+    '.jjJjjjnnn',
+    '.jjJjjjnnn',
+    '.jjJjjjnnn',
+    '.jjJjjjnnn',
+    '.ojjjjjnnn',
+    '.sjjjjbbbY',
+    '.sjjjjaaaa',
+    '..jjjaaaaa',
+    '...jjaaaaa',
+    '....aaaaa.',
+    '....aaaaa.',
+    '....aaAaa.',
+    '....aaAaa.',
+    '....aaAaa.',
+    '....aaAaa.',
+    '....aaAa..',
+    '....aaAa..',
+    '....dddd..',
+    '....dddd..',
+    '....dDdd..',
+    '...ddddd..',
+    '..........'
+  ];
+  const SUZI_HALF = [
+    '..........',
+    '......hhhh',
+    '....hhhhhh',
+    '...hhHhhhh',
+    '..hhHhhhhh',
+    '..hhhhhhhh',
+    '..hhhsshhs',
+    '..hhseesss',
+    '..hhsipsss',
+    '..hhssssss',
+    '..hhhsssss',
+    '..hhh.ssss',
+    '..hhh..sss',
+    '..hh..cccc',
+    '..hhcccccY',
+    '..hcccCccc',
+    '..cccCcccc',
+    '.ccccCcccc',
+    '.ccccCcccc',
+    '.ccccCcccc',
+    '.sccccYYYY',
+    '.scccccccc',
+    '..cccccccc',
+    '..cccCcccc',
+    '..cccLLLL.',
+    '..cc.LLLL.',
+    '..c..LLLL.',
+    '.....LLLL.',
+    '.....LLL..',
+    '.....LLL..',
+    '.....LLL..',
+    '.....LLL..',
+    '.....bbb..',
+    '.....bbb..',
+    '.....bbb..',
+    '....bbbb..',
+    '..........',
+    '..........'
+  ];
+  const HEROES = {
+    looka: {
+      grid: mirror(LOOKA_HALF),
+      // the scarf's tail streams out to one side
+      extra: [[15, 14, 'r'], [16, 14, 'r'], [16, 15, 'R'], [17, 15, 'r'], [17, 16, 'r'], [18, 16, 'R'], [18, 17, 'r']],
+      // calm: a warrior's smirk, one corner up. casting: a fierce grin and eyes flashing with lightning
+      faces: {
+        idle: { px: [[9, 12, 'M'], [10, 12, 'M'], [11, 12, 'M'], [12, 11, 'M']] },
+        cast: { px: [[7, 11, 'M'], [12, 11, 'M'], [8, 12, 'W'], [9, 12, 'W'], [10, 12, 'W'], [11, 12, 'W'], [9, 13, 'M'], [10, 13, 'M']], col: { i: '#ffe066' } }
+      },
+      col: { k: '#1d2f4a', K: '#3e6a99', s: '#f6cfae', e: '#1d2f4a', i: '#3a9be8', p: '#0f1626', m: '#b4505e', r: '#d63a3a', R: '#9e2626', j: '#2f3344', J: '#1f222e', n: '#e9e4d8', o: '#ff8f2e', b: '#4a2e1a', Y: '#e0a83a', a: '#3a4560', A: '#283048', d: '#5a3a22', D: '#3b2618' }
+    },
+    suzi: {
+      grid: mirror(SUZI_HALF),
+      extra: [],
+      // calm: a sure little smile. casting: an open battle smile and glowing eyes
+      faces: {
+        idle: { px: [[8, 10, 'M'], [11, 10, 'M'], [9, 11, 'M'], [10, 11, 'M']] },
+        cast: { px: [[8, 10, 'M'], [11, 10, 'M'], [8, 11, 'M'], [9, 11, 'M'], [10, 11, 'M'], [11, 11, 'M'], [9, 12, 'T'], [10, 12, 'T']], col: { i: '#f3d6ff', p: '#c08cff' } }
+      },
+      col: { h: '#e98bb9', H: '#ffc2dd', s: '#f6cfae', e: '#3a1f4a', i: '#9a5cff', p: '#2a1440', m: '#b4505e', c: '#4b3a9a', C: '#352a74', Y: '#e8b84a', L: '#2a2438', b: '#5a3a2a' }
+    }
+  };
+  // bake each hero once at 1px per pixel with a dark outline; feet = canvas row just under the boots
+  function bakeHero(who, face) {
+    const { grid, extra, faces } = HEROES[who], f = faces[face];
+    const col = { M: '#6e2a36', W: '#ffffff', T: '#e8838f', ...HEROES[who].col, ...(f.col || {}) };
+    const rows = grid.map(r => [...r]);
+    [...extra, ...f.px].forEach(([x, y, c]) => { rows[y][x] = c; });
+    const w = rows[0].length + 2, h = rows.length + 2;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'), on = (x, y) => rows[y] && rows[y][x] && rows[y][x] !== '.';
+    g.fillStyle = '#140c18';
+    for (let y = -1; y <= rows.length; y++) for (let x = -1; x <= rows[0].length; x++)
+      if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) g.fillRect(x + 1, y + 1, 1, 1);
+    let feet = 0;
+    rows.forEach((r, y) => r.forEach((ch, x) => { if (ch !== '.') { g.fillStyle = col[ch]; g.fillRect(x + 1, y + 1, 1, 1); feet = Math.max(feet, y + 2); } }));
+    c.feet = feet;
+    return c;
+  }
+  
+  const FACES = { looka: { idle: bakeHero('looka', 'idle'), cast: bakeHero('looka', 'cast') }, suzi: { idle: bakeHero('suzi', 'idle'), cast: bakeHero('suzi', 'cast') } };
+  const SPR = { looka: FACES.looka.idle, suzi: FACES.suzi.idle }; // sizes and anchors
+  const ease = v => v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+  const easeOut = v => 1 - Math.pow(1 - v, 3);
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const seg = (e, a, b) => clamp((e - a) / (b - a));
+  const Z = 3; // one sprite pixel = 3 canvas pixels
+  const MID = who => SPR[who].feet - SPR[who].height / 2; // feet sit this far below the middle
+  const rot2 = (x, y, a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  
+  // draw a hero with feet at (x, y); the sprite turns around its middle so flips look right
+  function blit(g, who, st, alpha = 1) {
+    g.save(); g.globalAlpha = alpha; g.imageSmoothingEnabled = false;
+    const w = SPR[who].width, h = SPR[who].height;
+    g.translate(st.x, st.y - MID(who) * Z); g.rotate(st.rot || 0); g.scale(st.sx || 1, st.sy || 1);
+    // weapons go in front of the body so the hands read as holding them
+    g.drawImage(FACES[who][st.cast ? 'cast' : 'idle'], -w / 2 * Z, -h / 2 * Z, w * Z, h * Z);
+    if (who === 'looka') sword(g, st.blade ?? 2.6, st.glow);
+    if (who === 'suzi') staff(g, st.lift || 0, st.glow);
+    g.restore();
+  }
+  // sword in the right hand; angle 0 points straight up
+  function sword(g, a, glow) {
+    g.save(); g.translate(8 * Z, 2 * Z); g.rotate(a);
+    g.fillStyle = '#3b2618'; g.fillRect(-Z / 2, 0, Z, 3 * Z);
+    g.fillStyle = '#ffd23f'; g.fillRect(-2 * Z, -Z, 4 * Z, Z);
+    if (glow) { g.shadowColor = '#ffe066'; g.shadowBlur = 24; }
+    g.fillStyle = glow ? '#fffbe0' : '#dfe6ee'; g.fillRect(-Z, -14 * Z, 2 * Z, 13 * Z);
+    g.fillStyle = glow ? '#fff6a0' : '#aab4c0'; g.fillRect(0, -14 * Z, Z, 13 * Z);
+    g.restore();
+  }
+  // staff in the left hand with a glowing crystal
+  function staff(g, lift, glow) {
+    g.save(); g.translate(-9 * Z, (1.5 - lift * 8) * Z);
+    g.fillStyle = '#7a4f2d'; g.fillRect(-Z / 2, -10 * Z, Z, 22 * Z);
+    g.fillStyle = '#ffd23f'; g.fillRect(-1.5 * Z, -11 * Z, 3 * Z, Z);
+    g.shadowColor = '#c08cff'; g.shadowBlur = glow ? 30 : 12;
+    g.fillStyle = '#f0e2ff'; g.fillRect(-1.5 * Z, -15 * Z, 3 * Z, 4 * Z);
+    g.fillStyle = '#b98cff'; g.fillRect(-.5 * Z, -14 * Z, Z, 2 * Z);
+    g.restore();
+  }
+  function bolt(g, x0, y0, x1, y1, w) {
+    g.beginPath(); g.moveTo(x0, y0);
+    const n = 7; for (let i = 1; i < n; i++) g.lineTo(lerp(x0, x1, i / n) + (Math.random() - .5) * 26, lerp(y0, y1, i / n));
+    g.lineTo(x1, y1); g.lineWidth = w; g.stroke();
+  }
+  function sparks(g, list, dt) {
+    list.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.grav || 0) * dt; p.life -= dt; });
+    g.save();
+    list.forEach(p => { g.globalAlpha = clamp(p.life / p.max); g.shadowColor = p.c; g.shadowBlur = 10; g.fillStyle = p.c; g.fillRect(p.x, p.y, p.s, p.s); });
+    g.restore();
+    return list.filter(p => p.life > 0);
+  }
+  
+  /* Looka: Storm Leap. crouch, leap with a front flip, lightning at the top, diving slash, shockwave landing */
+  function lookaState(e, W, H, t) {
+    const gy = H - 24, cx = W * .3, land = W * .7, peak = gy - 90;
+    if (e < 0) return { x: cx, y: gy + Math.sin(t * 2.2) * 2, blade: 2.6 };
+    const crouch = seg(e, 0, .35), jump = seg(e, .35, 1.05), flip = seg(e, .4, 1.05), dive = seg(e, 1.55, 1.85), back = seg(e, 2.5, 3.4);
+    if (e < .35) return { x: cx, y: gy, sy: 1 - .18 * Math.sin(crouch * Math.PI / 2), sx: 1 + .1 * Math.sin(crouch * Math.PI / 2), blade: 2.6 };
+    if (e < 1.05) return { x: lerp(cx, W * .5, easeOut(jump)), y: lerp(gy, peak, Math.sin(jump * Math.PI / 2)), rot: ease(flip) * Math.PI * 2, blade: lerp(2.6, 0, ease(flip)) };
+    if (e < 1.55) return { x: W * .5, y: peak + Math.sin((e - 1.05) * 8) * 2, blade: 0, glow: e > 1.15 };
+    if (e < 1.85) return { x: lerp(W * .5, land, ease(dive)), y: lerp(peak, gy, ease(dive)), rot: ease(dive) * .5, blade: lerp(0, 2.9, ease(dive)), glow: true };
+    if (e < 2.5) return { x: land, y: gy, sy: 1 - .15 * Math.max(0, 1 - (e - 1.85) * 5), sx: 1 + .12 * Math.max(0, 1 - (e - 1.85) * 5), blade: 2.9, glow: e < 2.1 };
+    return { x: lerp(land, cx, ease(back)), y: gy - Math.abs(Math.sin(back * Math.PI * 4)) * 4, blade: lerp(2.9, 2.6, back) };
+  }
+  function lookaFx(g, e, st, W, H, fx, dt) {
+    const gy = H - 24;
+    if (e > .4 && e < 1.85) fx.trail.push({ ...st }); // afterimages during the leap and the dive
+    else fx.trail.shift(); // then let them fade away
+    fx.trail = fx.trail.slice(-7);
+    fx.trail.forEach((s, i) => blit(g, 'looka', s, .06 + i * .03));
+    // lightning onto the raised blade
+    if (e > 1.15 && e < 1.5) {
+      const c = [st.x, st.y - MID('looka') * Z], h = rot2(8 * Z, 2 * Z, st.rot || 0), tip = [c[0] + h[0], c[1] + h[1] - 14 * Z];
+      g.save(); g.strokeStyle = '#fffbe0'; g.shadowColor = '#ffd23f'; g.shadowBlur = 26;
+      bolt(g, tip[0] + 30, 0, tip[0], tip[1], 5); bolt(g, tip[0] - 40, 0, tip[0], tip[1], 2); g.restore();
+      if (e < 1.22) { g.fillStyle = 'rgba(255,246,170,.45)'; g.fillRect(0, 0, W, H); }
+      for (let i = 0; i < 3; i++) fx.sp.push({ x: tip[0], y: tip[1], vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, life: .4, max: .4, s: 4, c: '#ffe066' });
+    }
+    // the diving slash: a huge crescent following the blade, with a crackling edge
+    if (e > 1.55 && e < 2.3) {
+      const k = seg(e, 1.55, 1.85), fade = 1 - seg(e, 1.85, 2.3);
+      const cx = lerp(W * .5, W * .7, ease(k)), cy = lerp(H - 24 - 90, H - 24, ease(k)) - MID('looka') * Z;
+      g.save(); g.globalAlpha = fade; g.strokeStyle = '#fff6c0'; g.shadowColor = '#ffd23f'; g.shadowBlur = 30;
+      g.lineWidth = 10; g.beginPath(); g.arc(cx, cy, 90, -1.9, -1.9 + k * 3.2); g.stroke();
+      g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 108, -1.7, -1.7 + k * 2.8); g.stroke();
+      g.strokeStyle = '#fff'; g.lineWidth = 2; if (k < 1) bolt(g, cx - 60, cy - 70, cx + 70, cy + 60, 2);
+      g.restore();
+    }
+    // landing: shockwave ring, dust and a shake
+    if (e > 1.85 && e < 2.6) {
+      const k = seg(e, 1.85, 2.6);
+      g.save(); g.globalAlpha = 1 - k; g.strokeStyle = '#ffe9a8'; g.shadowColor = '#ffd23f'; g.shadowBlur = 16; g.lineWidth = 4 * (1 - k) + 1;
+      g.beginPath(); g.ellipse(W * .7, gy, 30 + k * 170, 6 + k * 22, 0, 0, Math.PI * 2); g.stroke(); g.restore();
+      if (e < 1.95) for (let i = 0; i < 6; i++) fx.sp.push({ x: W * .7 + (Math.random() - .5) * 40, y: gy, vx: (Math.random() - .5) * 300, vy: -Math.random() * 160, grav: 500, life: .7, max: .7, s: 5, c: i % 2 ? '#c9b48a' : '#ffe066' });
+    }
+    fx.sp = sparks(g, fx.sp, dt);
+  }
+  
+  /* Suzi: Petal Comet. twirl, take off, fly a loop with a petal trail, giant rune sigil burst, float down */
+  function suziState(e, W, H, t) {
+    const gy = H - 24, cx = W * .5, cy = gy - 78;
+    if (e < 0) return { x: cx, y: gy + Math.sin(t * 2) * 2 };
+    if (e < .7) return { x: cx, y: gy, sx: Math.cos(seg(e, 0, .7) * Math.PI * 4), lift: .3, glow: true };
+    if (e < 1.2) { const k = ease(seg(e, .7, 1.2)); return { x: cx, y: lerp(gy, cy, k), lift: .5, glow: true, rot: Math.sin(k * Math.PI) * .15 }; }
+    if (e < 2.7) { const a = seg(e, 1.2, 2.7) * Math.PI * 2; return { x: cx + Math.sin(a) * W * .32, y: cy - Math.sin(2 * a) * 30, rot: Math.cos(a) * .35, sx: Math.cos(a) >= 0 ? 1 : -1, lift: .5, glow: true }; }
+    if (e < 3.3) return { x: cx, y: cy + Math.sin((e - 2.7) * 9) * 2, lift: 1, glow: true };
+    const k = ease(seg(e, 3.3, 4.3)); return { x: cx, y: lerp(cy, gy, k), lift: 1 - k, rot: Math.sin(k * Math.PI * 2) * .06 };
+  }
+  function suziFx(g, e, st, W, H, fx, dt) {
+    const gy = H - 24, cx = W * .5, cy = gy - 78;
+    // rune circle on the ground at take-off
+    if (e > 0 && e < 1.6) {
+      const k = easeOut(seg(e, 0, .5)), fade = 1 - seg(e, 1, 1.6);
+      g.save(); g.globalAlpha = fade; g.strokeStyle = '#d6b8ff'; g.shadowColor = '#a070ff'; g.shadowBlur = 16; g.lineWidth = 3;
+      g.beginPath(); g.ellipse(cx, gy, 70 * k, 16 * k, 0, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.ellipse(cx, gy, 50 * k, 11 * k, 0, 0, Math.PI * 2); g.stroke();
+      for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + e * 2; g.fillStyle = '#f0e2ff'; g.fillRect(cx + Math.cos(a) * 60 * k - 2, gy + Math.sin(a) * 13.5 * k - 2, 4, 4); }
+      g.restore();
+    }
+    // petal trail and afterimages while flying
+    if (e > .7 && e < 2.7) {
+      fx.trail.push({ ...st }); fx.trail = fx.trail.slice(-8);
+      for (let i = 0; i < 2; i++) fx.sp.push({ x: st.x + (Math.random() - .5) * 30, y: st.y - 40 + (Math.random() - .5) * 30, vx: (Math.random() - .5) * 40, vy: 20 + Math.random() * 30, life: 1.2, max: 1.2, s: 4, c: Math.random() < .5 ? '#ffb3d9' : '#d6b8ff' });
+    } else fx.trail = fx.trail.slice(1);
+    fx.trail.forEach((s, i) => blit(g, 'suzi', s, .05 + i * .025));
+    // the giant rune sigil behind her, then the burst
+    if (e > 2.7 && e < 3.9) {
+      const k = easeOut(seg(e, 2.7, 3.05)), fade = 1 - seg(e, 3.3, 3.9), y = cy - MID('suzi') * Z;
+      g.save(); g.globalAlpha = fade; g.translate(cx, y); g.rotate(e * .8); g.strokeStyle = '#e4d0ff'; g.shadowColor = '#a070ff'; g.shadowBlur = 22; g.lineWidth = 3;
+      g.beginPath(); g.arc(0, 0, 92 * k, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(0, 0, 74 * k, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); for (let i = 0; i <= 6; i++) { const a = i * 2 / 6 * Math.PI * 2; g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 74 * k, Math.sin(a) * 74 * k); } g.stroke();
+      g.beginPath(); for (let i = 0; i <= 6; i++) { const a = (i * 2 + 1) / 6 * Math.PI * 2; g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 74 * k, Math.sin(a) * 74 * k); } g.stroke();
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.fillStyle = '#ffe9ff'; g.fillRect(Math.cos(a) * 83 * k - 3, Math.sin(a) * 83 * k - 3, 6, 6); }
+      g.restore();
+      if (e > 3.05 && !fx.burst) {
+        fx.burst = true;
+        for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2, v = 160 + Math.random() * 120; fx.sp.push({ x: cx, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav: 60, life: 1.3, max: 1.3, s: 5, c: i % 3 ? '#ffb3d9' : '#e4d0ff' }); }
+      }
+      if (e > 3.05 && e < 3.2) { g.fillStyle = 'rgba(230,210,255,.4)'; g.fillRect(0, 0, W, H); }
+    }
+    if (e < 0) fx.burst = false;
+    fx.sp = sparks(g, fx.sp, dt);
+  }
+
+  // a quiet medieval village on the horizon behind the heroes, drawn once per size
+  const village = {};
+  function drawVillage(g, W, H) {
+    const key = W + 'x' + H;
+    if (!village[key]) {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const v = c.getContext('2d'), gy = H - 24;
+      v.fillStyle = '#2a241c'; v.fillRect(0, gy - 4, W, H - gy + 4);
+      [[18, 46, 34], [70, 38, 44], [128, 52, 30], [250, 44, 40], [310, 56, 30], [352, 40, 46]].forEach(([x, w, h]) => {
+        const top = gy - 4 - h;
+        v.fillStyle = '#141a2c'; v.fillRect(x, top, w, h);
+        v.beginPath(); v.moveTo(x - 4, top); v.lineTo(x + w / 2, top - w * .45); v.lineTo(x + w + 4, top); v.closePath(); v.fill();
+        v.fillStyle = '#ffcd6a'; v.fillRect(x + w * .3, top + h * .35, 4, 5); if (w > 40) v.fillRect(x + w * .62, top + h * .35, 4, 5);
+      });
+      v.fillStyle = '#141a2c'; v.fillRect(196, gy - 70, 10, 66); v.fillRect(190, gy - 76, 22, 8); // a watchtower
+      village[key] = c;
+    }
+    g.drawImage(village[key], 0, 0);
+  }
+
+  const LEN = { looka: 3.6, suzi: 4.5 };
+  const STATE = { looka: lookaState, suzi: suziState }, FX = { looka: lookaFx, suzi: suziFx };
+  // one frame of a hero's spell; e < 0 means standing idle
+  function heroFrame(g, who, e, t, W, H, data, dt) {
+    drawVillage(g, W, H);
+    const st = STATE[who](e, W, H, t);
+    st.cast = e >= 0 && e < LEN[who] - .7;
+    FX[who](g, e, st, W, H, data, dt);
+    blit(g, who, st);
+  }
+  // the companion card and the intro: the shade, or the freed hero at 2 canvas px per sprite px
+  function cardFrame(g, size, form, stage, t, P) {
+    g.clearRect(0, 0, size, size);
+    const bob = Math.round(Math.sin(t * 1.6) * 2);
+    if (form === 'ghost') return drawShade(g, P, stage, t, (size - 24 * P) / 2, (size - 24 * P) / 2 + bob);
+    g.save(); g.scale(2 / Z, 2 / Z);
+    blit(g, form, { x: size / 2 * Z / 2, y: (size - 3 + bob) * Z / 2, blade: 2.6 });
+    g.restore();
+  }
+  // the choice: both heroes waiting in the village
+  function duo(g, W, H) {
+    g.clearRect(0, 0, W, H); drawVillage(g, W, H);
+    blit(g, 'looka', { x: W * .32, y: H - 24, blade: 2.6 }); blit(g, 'suzi', { x: W * .68, y: H - 24 });
+  }
+  // the companion on the map (72x96): the shade floats; heroes bob and lean while walking and face where they go
+  function palFrame(g, form, stage, t, walking, face) {
+    g.clearRect(0, 0, 72, 96);
+    const bob = walking ? -Math.abs(Math.sin(t * 14)) * 4 : Math.round(Math.sin(t * 1.6) * 2);
+    if (form === 'ghost') return drawShade(g, 3, stage, t, 0, 22 + bob);
+    g.save(); g.translate(36, 94); g.rotate(walking ? Math.sin(t * 14) * .06 : 0); g.scale(face || 1, 1); g.translate(-36, -94);
+    g.scale(2 / Z, 2 / Z); blit(g, form, { x: 36 * Z / 2, y: (94 + bob) * Z / 2, blade: 2.6 });
+    g.restore();
+  }
+  return { drawShade, freeFrame, heroFrame, cardFrame, duo, palFrame, LEN };
+})();
+
+const STAGE_LINES = [
+  'Its heart is empty. Ten shards are missing.',
+  'The first shard is back. A faint blue light.',
+  'Two shards. The light grows under the cloak.',
+  'Three shards. Gogii feels a little warmer.',
+  'Four shards. Almost half a heart.',
+  'Half a heart, glowing blue.',
+  'Six shards. The curse is weakening.',
+  'Seven shards. Light spills through the cloak.',
+  'Eight shards. Gogii remembers Lantern Village.',
+  'One shard left. Gogii can almost break free.',
+  'The heart is whole! Choose who Gogii becomes.'
+];
+const STAGE_TOASTS = STAGE_LINES.map((_, i) => i === ALIVE ? 'The heart is whole!' : `Shard ${i} of 10 returns`);
+const FORMS = { looka: 'Looka', suzi: 'Suzi' }, SKILLS = { looka: 'Storm Leap', suzi: 'Petal Comet' };
+
+function renderBuddy() {
+  const st = stageOf(S.xp), alive = st >= ALIVE, form = alive && S.form ? S.form : 'ghost';
+  setText('buddyName', S.name || 'Gogii');
+  setText('buddyForm', form === 'ghost' ? `Gogii the shade, ${st} of ${ALIVE} shards` : `${FORMS[form]} of Lantern Village`);
+  setText('buddyLine', form !== 'ghost' ? 'Free at last. Every lesson from here is a victory lap.' : STAGE_LINES[st]);
+  const into = S.xp % STAGE_XP;
+  document.getElementById('buddyFill').style.width = (alive ? 100 : into / STAGE_XP * 100) + '%';
+  setText('buddyNext', alive ? 'the heart is whole' : `${STAGE_XP - into} xp to the next shard`);
+  document.getElementById('buddyPick').hidden = !(alive && !S.form);
+  document.getElementById('buddyFree').hidden = !alive;
+  const cast = document.getElementById('buddyCast');
+  cast.hidden = form === 'ghost'; cast.textContent = form === 'ghost' ? '' : 'Cast ' + SKILLS[form];
+  drawBuddy(0);
+}
+// the card's sprite breathes: the heart pulses, the hero bobs. Paused when the tab is hidden or motion is reduced.
+function drawBuddy(t) {
+  const st = stageOf(S.xp), form = st >= ALIVE && S.form ? S.form : 'ghost';
+  ART.cardFrame(document.getElementById('buddyArt').getContext('2d'), 96, form, st, t, 4);
+  if (!INTRO.hidden) ART.cardFrame(document.getElementById('introArt').getContext('2d'), 144, 'ghost', st, t, 6);
+  document.querySelectorAll('[data-art]').forEach(cv => ART.cardFrame(cv.getContext('2d'), 96, cv.dataset.art, ALIVE, t, 4));
+  if (COMP.isConnected) ART.palFrame(COMP.getContext('2d'), form, st, t, !!palWalk && !palWalk.warp, palFace);
+}
+if (!REDUCED) {
+  let lastCard = 0;
+  const loop = now => { if (!document.hidden && now - lastCard > (palWalk ? 30 : 50)) { lastCard = now; drawBuddy(now / 1000); } requestAnimationFrame(loop); };
+  requestAnimationFrame(loop); // first tick after the whole script has run
+}
+function chooseForm(f) {
+  if (!FORMS[f] || S.form || stageOf(S.xp) < ALIVE) return;
+  S.form = f; save(); renderBuddy();
+  toast(`${S.name || 'Gogii'} became ${FORMS[f]}`, true);
+  openArena('skill');
+}
+
+/* the arena: one window for the curse breaking and for the heroes' spells */
+const ARENA = document.getElementById('arena'), arenaG = document.getElementById('arenaArt').getContext('2d');
+let arena = null;
+function openArena(kind) {
+  if (kind === 'skill' && !S.form) return;
+  if (kind === 'free' && stageOf(S.xp) < ALIVE) return;
+  const first = ARENA.hidden;
+  if (first) arenaFocus = document.activeElement;
+  ARENA.hidden = false;
+  arena = { kind, who: S.form, start: performance.now(), last: performance.now(), data: { trail: [], sp: [] }, run: { parts: [], out: new Set() } };
+  setText('arenaTitle', kind === 'free' ? 'The curse breaks' : `${FORMS[S.form]}: ${SKILLS[S.form]}`);
+  setText('arenaLine', '');
+  document.getElementById('arenaPick').hidden = true;
+  document.getElementById('arenaReplay').hidden = true;
+  if (first) document.getElementById('arenaClose').focus();
+  if (REDUCED) return arenaStill();
+  requestAnimationFrame(arenaTick);
+}
+let arenaFocus = null;
+function arenaTick(now) {
+  if (!arena || ARENA.hidden) return;
+  const e = (now - arena.start) / 1000, dt = Math.min(.05, (now - arena.last) / 1000), W = 400, H = 260;
+  arena.last = now;
+  arenaG.clearRect(0, 0, W, H);
+  if (arena.kind === 'free') {
+    setText('arenaLine', ART.freeFrame(arenaG, W, H, e, now / 1000, arena.run, dt));
+    if (e > 6.2) return arenaEnd();
+  } else {
+    ART.heroFrame(arenaG, arena.who, e, now / 1000, W, H, arena.data, dt);
+    if (e > ART.LEN[arena.who] + .3) return arenaEnd();
+  }
+  requestAnimationFrame(arenaTick);
+}
+// after the curse breaks, ask who Gogii becomes (unless that's already decided); after a spell, offer a replay
+function arenaEnd() {
+  if (arena.kind === 'free' && !S.form) {
+    setText('arenaTitle', 'Who will Gogii become?');
+    setText('arenaLine', 'Looka, the storm blade, or Suzi, the petal comet.');
+    document.getElementById('arenaPick').hidden = false;
+    ART.duo(arenaG, 400, 260);
+    drawBuddy(0);
+  } else {
+    document.getElementById('arenaReplay').hidden = false;
+    if (arena.kind === 'skill') ART.heroFrame(arenaG, arena.who, -1, 0, 400, 260, { trail: [], sp: [] }, 0);
+  }
+}
+// reduced motion: no animation, just the end state
+function arenaStill() {
+  arenaG.clearRect(0, 0, 400, 260);
+  if (arena.kind === 'skill') ART.heroFrame(arenaG, arena.who, -1, 0, 400, 260, arena.data, 0);
+  else setText('arenaLine', '"I can finally be free."');
+  arenaEnd();
+}
+function closeArena() {
+  ARENA.hidden = true; arena = null;
+  if (arenaFocus && arenaFocus.focus) arenaFocus.focus();
+}
+function arenaKeys(e) {
+  if (e.key === 'Escape') return closeArena();
+  if (e.key === 'Tab') {
+    const f = [...ARENA.querySelectorAll('button')].filter(b => b.offsetParent !== null);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }
+}
+
+/* first visit: tell Gogii's story, then ask for a name */
+const INTRO = document.getElementById('intro');
+function openIntro() {
+  INTRO.hidden = false;
+  const n = stageOf(S.xp);
+  setText('introXp', n ? `You already have ${S.xp} xp, so ${n} of the ten shards ${n === 1 ? 'is' : 'are'} back.` : '');
+  setText('nameFb', '');
+  drawBuddy(0);
+  const inp = document.getElementById('nameIn');
+  inp.value = S.name || '';
+  setTimeout(() => inp.focus(), 50);
+}
+function submitName() {
+  const v = document.getElementById('nameIn').value.trim().replace(/\s+/g, ' ');
+  if (!validName(v)) return setText('nameFb', 'Use 1 to 20 letters or numbers. Spaces and \' . _ - are fine too.');
+  S.name = v; save();
+  INTRO.hidden = true;
+  renderBuddy();
+  toast(`Welcome, ${v}`, true);
+  document.getElementById('heroGo').focus();
+  if (stageOf(S.xp) >= ALIVE && !S.form) setTimeout(() => openArena('free'), 600);
+}
+function introKeys(e) {
+  if (e.key === 'Enter' && e.target.id === 'nameIn') { e.preventDefault(); return submitName(); }
+  if (e.key === 'Tab') {
+    const f = [document.getElementById('nameIn'), document.getElementById('nameGo')];
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[1]) { e.preventDefault(); f[0].focus(); }
+  }
+}
+
+/* the companion on the map: stands beside the stop you're on and walks the trail to the one you click */
+const COMP = document.createElement('canvas');
+COMP.className = 'pal'; COMP.width = 72; COMP.height = 96; COMP.setAttribute('aria-hidden', 'true');
+let palAt = null, palWalk = null, palFace = 1;
+const stopEl = id => mapEl.querySelector(`[data-stop="${id}"]`);
+// stand on the outer side of the stop, away from the zig-zag, so it never covers the trail or leaves the screen
+const palSide = st => parseFloat(st.style.getPropertyValue('--x')) < 0 ? 'right' : 'left';
+function palSpot(st) {
+  const n = st.querySelector('.node');
+  return { x: palSide(st) === 'left' ? n.offsetLeft - 70 : n.offsetLeft + n.offsetWidth - 2, y: n.offsetTop + n.offsetHeight - 96 };
+}
+// rest inside the stop's own box, so it rises in with the stop's reveal animation
+function parkPal(id) {
+  const st = stopEl(id);
+  if (!st) return;
+  palAt = id; S.at = id;
+  const p = palSpot(st);
+  COMP.style.left = p.x + 'px'; COMP.style.top = p.y + 'px'; COMP.style.opacity = '';
+  palFace = palSide(st) === 'left' ? 1 : -1; // face the trail
+  st.appendChild(COMP);
+}
+// where the companion would stand at a stop, in map coordinates (used while it's walking)
+function palMapSpot(st) {
+  const n = st.querySelector('.node').getBoundingClientRect(), m = mapEl.getBoundingClientRect();
+  return { x: (palSide(st) === 'left' ? n.left - 70 : n.right - 2) - m.left, y: n.bottom - 96 - m.top };
+}
+function palGo(id, done) {
+  if (palWalk) { const w = palWalk; palWalk = null; parkPal(w.to); }
+  const from = palAt && stopEl(palAt), to = stopEl(id);
+  if (REDUCED || !from || !to || from === to) { parkPal(id); save(); return done(); }
+  const i0 = ALL.indexOf(BY_ID[palAt]), i1 = ALL.indexOf(BY_ID[id]), step = i1 > i0 ? 1 : -1;
+  // up to 6 stops away it walks through each one; further than that it fades out and reappears
+  const warp = Math.abs(i1 - i0) > 6;
+  const stops = warp ? [from, to] : Array.from({ length: Math.abs(i1 - i0) + 1 }, (_, k) => stopEl(ALL[i0 + k * step].id));
+  const pts = stops.map(palMapSpot);
+  mapEl.appendChild(COMP);
+  COMP.style.left = pts[0].x + 'px'; COMP.style.top = pts[0].y + 'px';
+  palWalk = { to: id, pts, warp, done, t0: performance.now(), seg: warp ? 500 : Math.min(320, 1300 / (pts.length - 1)) };
+  requestAnimationFrame(palStep);
+}
+function palStep(now) {
+  const w = palWalk;
+  if (!w) return;
+  const k = (now - w.t0) / w.seg, i = Math.min(w.pts.length - 2, Math.floor(k)), f = Math.min(1, k - i);
+  const a = w.pts[i], b = w.pts[i + 1], e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+  if (w.warp) {
+    // fade out where it stands, reappear at the destination
+    const p = f < .5 ? a : b;
+    COMP.style.left = p.x + 'px'; COMP.style.top = p.y + 'px'; COMP.style.opacity = String(Math.abs(1 - 2 * f));
+  } else {
+    COMP.style.left = a.x + (b.x - a.x) * e + 'px'; COMP.style.top = a.y + (b.y - a.y) * e + 'px';
+    if (Math.abs(b.x - a.x) > 2) palFace = b.x > a.x ? 1 : -1;
+  }
+  if (k >= w.pts.length - 1) { palWalk = null; parkPal(w.to); save(); return w.done(); }
+  requestAnimationFrame(palStep);
+}
+
+/* owner preview: scrub Gogii through every shard and form; save() is off, so real progress is untouched */
+if (PREVIEW) {
+  const p = document.createElement('div');
+  p.className = 'owner px';
+  p.innerHTML = `<b>Owner preview</b><span>Only saved when you press Save this.</span>
+    <label for="ownXp">xp <output id="ownXpOut"></output></label>
+    <input type="range" id="ownXp" min="0" max="1000" step="10">
+    <div class="owner-row"><button class="btn small ghost px" type="button" data-own="-100">-100</button><button class="btn small px" type="button" data-own="100">+100</button><button class="btn small ghost px" type="button" data-own-free="1">Curse breaks</button></div>
+    <div class="owner-row"><button class="btn small ghost px" type="button" data-own-form="ghost">Shade</button><button class="btn small ghost px" type="button" data-own-form="looka">Looka</button><button class="btn small ghost px" type="button" data-own-form="suzi">Suzi</button></div>
+    <div class="owner-row"><button class="btn small ghost px" type="button" data-own-intro="1">Show intro</button><button class="btn small sky px" type="button" data-own-save="1">Save this</button><a class="btn small warn px" href="./">Exit</a></div>`;
+  document.body.appendChild(p);
+  const slider = p.querySelector('#ownXp');
+  const setXp = (v, celebrate) => {
+    const before = stageOf(S.xp);
+    S.xp = Math.max(0, Math.min(1000, v));
+    if (S.xp < 1000) delete S.form;
+    slider.value = S.xp; p.querySelector('#ownXpOut').textContent = S.xp;
+    refreshAll();
+    if (celebrate && stageOf(S.xp) > before) toast(STAGE_TOASTS[stageOf(S.xp)], true);
+  };
+  slider.addEventListener('input', () => setXp(+slider.value));
+  p.addEventListener('click', e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.own) setXp(S.xp + +t.dataset.own, true);
+    if (t.dataset.ownFree) { delete S.form; setXp(1000); openArena('free'); }
+    if (t.dataset.ownForm) { setXp(t.dataset.ownForm === 'ghost' ? Math.min(S.xp, 990) : 1000); if (t.dataset.ownForm !== 'ghost') { S.form = t.dataset.ownForm; renderBuddy(); } }
+    if (t.dataset.ownIntro) openIntro();
+    if (t.dataset.ownSave) {
+      // the one deliberate write: make what's on screen (xp, form, name) the real saved progress
+      try { localStorage.setItem(KEY, JSON.stringify(S)); toast('Saved as your real progress', true); }
+      catch (err) { toast("Can't save progress in this browser"); }
+    }
+  });
+  setXp(S.xp);
+}
+
 /* hash routing: #p2-records opens that lesson */
 function fromHash() {
   let id = '';
@@ -2669,12 +3373,15 @@ function fromHash() {
   if (/^p[1-4]-[a-z0-9]+$/.test(id) && Object.hasOwn(BY_ID, id)) openLesson(id, firstOpenStep(BY_ID[id]));
 }
 window.addEventListener('hashchange', fromHash);
-window.addEventListener('resize', () => { clearTimeout(window.__rz); window.__rz = setTimeout(layout, 120); });
+window.addEventListener('resize', () => { clearTimeout(window.__rz); window.__rz = setTimeout(() => { layout(); if (palAt && !palWalk) parkPal(palAt); }, 120); });
 
 buildMap();
 setupReveal();
+parkPal(S.at && Object.hasOwn(BY_ID, S.at) ? S.at : (nextLesson() || ALL[0]).id);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(drawPaths));
 fromHash();
+if (!S.name) openIntro();
+else if (stageOf(S.xp) >= ALIVE && !S.form) openArena('free');
 
 /* ---------- pixel scene (night or sakura day) ---------- */
 const PAL = {
@@ -2936,6 +3643,7 @@ let switchScene = () => {};
     if (root.dataset.theme === 'day') delete root.dataset.theme; else root.dataset.theme = 'day';
     try { localStorage.setItem('dojo-java.theme', root.dataset.theme || 'night'); } catch (e) {}
     switchScene(); sync();
+
   };
   btn.addEventListener('click', () => {
     btn.classList.remove('spin'); void btn.offsetWidth; btn.classList.add('spin');
