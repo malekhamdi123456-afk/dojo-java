@@ -10,11 +10,11 @@ A Duolingo-style Java course in a single web page: 34 bite-size stops covering t
 |---|---|---|
 | Lantern Village | 1 | Variables, math, if/switch, loops, arrays, methods, Strings |
 | Bamboo Grove | 2 | Classes, constructors, encapsulation, inheritance, polymorphism, interfaces, records, enums |
-| Mountain Shrine | 3 | ArrayList, HashMap, Sets, generics, exceptions, files |
+| Dragon Keep | 3 | ArrayList, HashMap, Sets, generics, exceptions, files |
 | Moon Garden | 4 | Lambdas, functional interfaces, streams, Optional, modern syntax, pattern matching |
 
 Every stop has five parts: **Story → Syntax → Practice → Quiz → In the wild**.
-Each world ends with a gate project you build in your IDE.
+Each world ends with a dungeon gate (a boss project) you build in your IDE.
 
 - Exercises with hint and solution buttons
 - Fill-in and "what prints?" answers are checked on the page

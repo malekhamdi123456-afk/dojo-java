@@ -89,6 +89,7 @@ System.out.println(a);`, a: ['21'], h: `Go line by line. After line 2, a is 7.`,
       `Your battery percent, a song's length, the number of unread messages, your health bar in a game: all variables somewhere.`,
       `Banks use precise types for money. Many store amounts as whole cents (a <code>long</code>) to avoid tiny decimal errors.`
     ],
+    factTag: 'true story',
     fact: `In 1996 the Ariane 5 rocket exploded about 37 seconds after launch. A 64-bit decimal number was squeezed into a 16-bit integer box that was too small, the software crashed, and the rocket destroyed itself. Choosing the right type matters.`
   },
   {
@@ -401,7 +402,7 @@ System.out.println(s.substring(0, 4).toUpperCase());`, a: ['MOON'], h: `Position
     fact: `<code>"hi" == "hi"</code> is often <b>true</b>, because Java keeps a single copy of identical text written in your code (the "string pool"). But <code>new String("hi") == "hi"</code> is false. That's exactly why you always use equals.`
   },
   {
-    id: 'p1-gate', icon: '門', title: 'Gate: Guess the Number', gate: true,
+    id: 'p1-gate', icon: '竜', title: 'Gate: Guess the Number', gate: true,
     story: [
       `Time to combine everything into a real game. The computer secretly picks a number from 1 to 100. You guess. It answers "Higher!" or "Lower!" until you find it, then rates you by how many tries it took.`,
       `You'll need two new tools: <code>Scanner</code> to read what the player types, and <code>Random</code> to pick the secret number. Everything else you already know.`,
@@ -1037,7 +1038,7 @@ for (Planet p : Planet.values()) {
     fact: `Records became a full Java feature in <b>Java 16</b> (2021). Before that, programmers wrote the same constructor, getters, equals, hashCode and toString by hand for every data class.`
   },
   {
-    id: 'p2-gate', icon: '門', title: 'Gate: Lantern Library', gate: true,
+    id: 'p2-gate', icon: '竜', title: 'Gate: Lantern Library', gate: true,
     story: [
       `Build a small library system for a village. Books can be added, found by title, borrowed and returned. Then you'll level it up so the library can lend different kinds of items with different rules.`,
       `This uses classes, constructors, private fields, toString, arrays, inheritance and overriding all at once. It's the classic shape of real business software.`
@@ -1141,7 +1142,7 @@ public class Dvd extends Item {
   ]
 };
 const P3 = {
-  id: 'p3', world: 'Mountain Shrine', topic: 'Core APIs',
+  id: 'p3', world: 'Dragon Keep', topic: 'Core APIs',
   blurb: `Collections that grow, maps that find things instantly, generics, errors handled with care, and files that remember.`,
   lessons: [
   {
@@ -1542,7 +1543,7 @@ Files.delete(p)`, n: `All of these can throw IOException, so wrap them or add th
     fact: `Minecraft saves worlds in <b>region files</b>, each one holding a 32 × 32 area of chunks. Your whole world on disk is a folder full of them.`
   },
   {
-    id: 'p3-gate', icon: '門', title: 'Gate: Shrine To-Do', gate: true,
+    id: 'p3-gate', icon: '竜', title: 'Gate: Dungeon To-Do', gate: true,
     story: [
       `When it starts, it shows your tasks with a number in front of each one. Then it waits for you to type a command:`,
       `<code>add Buy rice</code> adds a new task called "Buy rice".<br><code>done 1</code> marks task number 1 as finished.<br><code>quit</code> stops the program.`,
@@ -2030,9 +2031,9 @@ static String describe(Event e) {
     fact: `Pattern matching for switch became final in <b>Java 21</b> (2023). Languages like Haskell and Rust had the idea for years, and Java borrowed it in small careful steps.`
   },
   {
-    id: 'p4-gate', icon: '門', title: 'Gate: Moon Garden Stats', gate: true,
+    id: 'p4-gate', icon: '竜', title: 'Gate: Moon Garden Stats', gate: true,
     story: [
-      `Last gate. Rewrite the to-do app from Gate 3 (Shrine To-Do) the modern way and give it a stats screen: how much is done, which tag is busiest, what's left.`,
+      `Last gate. Rewrite the to-do app from Gate 3 (Dungeon To-Do) the modern way and give it a stats screen: how much is done, which tag is busiest, what's left.`,
       `Then replace the if/else command reading with a sealed Command type and a pattern switch. This is how modern Java code looks in real companies.`
     ],
     ex: [
@@ -2377,7 +2378,7 @@ function renderStep() {
   } else if (s === 'wild') {
     h = `<h4 class="step-h">${l.gate ? '// cool stuff you can build now' : '// out in the real world'}</h4>
       <ul class="wild">${l.wild.map(w => `<li>${w}</li>`).join('')}</ul>
-      ${(l.facts || [l.fact]).filter(Boolean).map(f => `<div class="fact px"><div class="tag">fun fact</div><p>${f}</p></div>`).join('')}
+      ${(l.facts || [l.fact]).filter(Boolean).map(f => `<div class="fact px"><div class="tag">${l.factTag || 'fun fact'}</div><p>${f}</p></div>`).join('')}
       ${isDone(l) ? `<div class="done-banner px">${l.gate ? 'Gate open. Next world unlocked.' : 'Lantern lit. Nice work.'}</div>` : ''}`;
   }
   bodyEl.innerHTML = `<section>${h}</section>`;
@@ -2644,26 +2645,55 @@ setupReveal();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(drawPaths));
 fromHash();
 
-/* ---------- pixel night scene ---------- */
+/* ---------- pixel scene (night or sakura day) ---------- */
+const PAL = {
+  night: {
+    sky: ['#02060e', '#040c1c', '#06142a', '#081d38', '#0a2843', '#0c3449', '#0f4150', '#124d55'],
+    orb: ['#e2fff0', '#bff5dc', 'rgba(150,255,210,.18)'], crater: '#bfe9d6', stars: true, flies: true,
+    far: ['#071a33', '#0b2746'], mid: ['#06202e', '#0a3140'], near: ['#041519', '#082a2c'],
+    smallTree: '#0b2f2e', trunk: '#120f1a', needles: ['#0a3324', '#145a3b', '#1f7a4f'], sakura: false,
+    bloomTrunk: '#16111f', bloom: ['#0f5a52', '#18806f', '#2fb59a', '#7ff0d8', '#c4fbff'],
+    stone: '#0c1820', stoneEdge: '#1e4650', bars: '#1e4650', hole: '#03070c', torch: '#132327', flame: '#ffcd6a',
+    petals: ['#7ff0d8', '#c4fbff']
+  },
+  day: {
+    sky: ['#86bde3', '#a3cde6', '#c2dce6', '#dfe2dc', '#f2e1d2', '#f6d5cc', '#f4c5c7', '#f0b6bf'],
+    orb: ['#fff6e0', '#ffdcae', 'rgba(255,220,170,.35)'], crater: null, stars: false, flies: false,
+    far: ['#8ea9c6', '#c9d8e6'], mid: ['#6f9a86', '#93bb9c'], near: ['#86a46a', '#a9c584'],
+    smallTree: '#e9b6c4', trunk: '#4a3226', needles: ['#3f6b45', '#5a8c58', '#7dae6c'], sakura: true,
+    bloomTrunk: '#4a3226', bloom: ['#c25d7c', '#de83a0', '#f0a6bc', '#f8c8d5', '#fff0f4'],
+    stone: '#5b5560', stoneEdge: '#9a94a0', bars: '#2b2226', hole: '#1c1418', torch: '#3b2c22', flame: '#ff9a52',
+    petals: ['#f4a3bc', '#ffd4e0', '#fbe6ec']
+  }
+};
+let switchScene = () => {};
 (function scene() {
   const cv = document.getElementById('scene');
   const ctx = cv.getContext('2d');
-  let W, H, PX, sky, far, mid, near, moon, stars = [], flies = [], petals = [];
+  // cur is the scene on screen; old is the one fading out underneath it during a switch
+  let W, H, PX, P, cur, old = null;
   const rnd = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-  const SKY = ['#02060e', '#040c1c', '#06142a', '#081d38', '#0a2843', '#0c3449', '#0f4150', '#124d55'].map(hex);
+  const clamp = v => Math.max(0, Math.min(1, v));
+  const ease = v => v < .5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+  const theme = () => document.documentElement.dataset.theme === 'day' ? 'day' : 'night';
 
   function off(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+  // records rects instead of drawing them, each tagged with the growth level (t) at which it appears
+  function recorder() { return { t: 0, fillStyle: '', rects: [], fillRect(x, y, w, h) { this.rects.push([x, y, w, h, this.fillStyle, this.t]); } }; }
 
-  function build() {
+  function build(name) {
+    P = PAL[name];
+    const SKY = P.sky.map(hex);
     PX = innerWidth < 640 ? 3 : 4;
-    W = Math.ceil(innerWidth / PX); H = Math.ceil(innerHeight / PX);
+    // never 0: a page opened hidden or at zero size would crash here and stay black
+    W = Math.max(1, Math.ceil(innerWidth / PX)); H = Math.max(1, Math.ceil(innerHeight / PX));
     cv.width = W; cv.height = H;
     const R = rnd(7);
 
     // sky with ordered dithering between bands
-    let c, g; [c, g] = off(W, H); sky = c;
+    let c, g; [c, g] = off(W, H); const sky = c;
     const img = g.createImageData(W, H), d = img.data;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const t = Math.min(.999, y / (H * .92)) * (SKY.length - 1);
@@ -2673,35 +2703,36 @@ fromHash();
     }
     g.putImageData(img, 0, 0);
 
-    // moon
+    // moon by night, sun by day
     const mr = Math.max(9, Math.round(Math.min(W, H) * .075));
-    [c, g] = off(mr * 4, mr * 4); moon = c;
+    [c, g] = off(mr * 4, mr * 4); const moon = c;
     const cx = mr * 2, cy = mr * 2;
     for (let y = 0; y < mr * 4; y++) for (let x = 0; x < mr * 4; x++) {
       const dd = Math.hypot(x - cx, y - cy);
-      if (dd <= mr) { g.fillStyle = dd > mr - 1.5 ? '#bff5dc' : '#e2fff0'; g.fillRect(x, y, 1, 1); }
-      else if (dd <= mr * 1.9 && BAYER[(y & 3) * 4 + (x & 3)] / 16 > (dd - mr) / (mr * .9) + .35) { g.fillStyle = 'rgba(150,255,210,.18)'; g.fillRect(x, y, 1, 1); }
+      if (dd <= mr) { g.fillStyle = dd > mr - 1.5 ? P.orb[1] : P.orb[0]; g.fillRect(x, y, 1, 1); }
+      else if (dd <= mr * 1.9 && BAYER[(y & 3) * 4 + (x & 3)] / 16 > (dd - mr) / (mr * .9) + .35) { g.fillStyle = P.orb[2]; g.fillRect(x, y, 1, 1); }
     }
-    g.fillStyle = '#bfe9d6';
-    [[-.35, -.2, .22], [.25, .3, .16], [.1, -.45, .1], [-.2, .4, .12]].forEach(([ox, oy, r]) => {
-      const rr = Math.max(1, Math.round(r * mr));
-      for (let y = -rr; y <= rr; y++) for (let x = -rr; x <= rr; x++) if (x * x + y * y <= rr * rr) g.fillRect(Math.round(cx + ox * mr + x), Math.round(cy + oy * mr + y), 1, 1);
-    });
+    if (P.crater) {
+      g.fillStyle = P.crater;
+      [[-.35, -.2, .22], [.25, .3, .16], [.1, -.45, .1], [-.2, .4, .12]].forEach(([ox, oy, r]) => {
+        const rr = Math.max(1, Math.round(r * mr));
+        for (let y = -rr; y <= rr; y++) for (let x = -rr; x <= rr; x++) if (x * x + y * y <= rr * rr) g.fillRect(Math.round(cx + ox * mr + x), Math.round(cy + oy * mr + y), 1, 1);
+      });
+    }
 
-    stars = Array.from({ length: Math.round(W * H / 700) }, () => ({ x: R() * W | 0, y: R() * H * .6 | 0, b: R(), p: R() * 6.28, big: R() < .08 }));
+    const stars = P.stars ? Array.from({ length: Math.round(W * H / 700) }, () => ({ x: R() * W | 0, y: R() * H * .6 | 0, b: R(), p: R() * 6.28, big: R() < .08 })) : [];
+    const clouds = P.stars ? [] : Array.from({ length: Math.max(3, W / 70 | 0) }, () => ({ x: R() * W, y: H * (.06 + R() * .3), w: 14 + R() * 26 | 0, v: .03 + R() * .05 }));
 
     const LH = Math.ceil(H * 1.7);
-    far = ridge(LH, H * .5, H * .1, 2, ['#071a33', '#0b2746'], 11, 2);
-    mid = ridge(LH, H * .64, H * .07, 2, ['#06202e', '#0a3140'], 23, 1);
+    const far = ridge(LH, H * .5, H * .1, 2, P.far, 11, 2);
+    const mid = ridge(LH, H * .64, H * .07, 2, P.mid, 23, 1);
     decorate(mid[1], H * .64, 'mid', R);
-    mid = mid[0];
-    near = ridge(LH, H * .8, H * .035, 2, ['#041519', '#082a2c'], 41, 1);
-    decorate(near[1], H * .8, 'near', R);
-    near = near[0];
-    far = far[0];
+    const near = ridge(LH, H * .8, H * .035, 2, P.near, 41, 1);
+    const trees = decorate(near[1], H * .8, 'near', R);
 
-    flies = Array.from({ length: Math.max(14, W / 18 | 0) }, () => ({ x: R() * W, y: H * (.45 + R() * .5), p: R() * 6.28, s: .2 + R() * .4 }));
-    petals = Array.from({ length: Math.max(10, W / 30 | 0) }, () => ({ x: R() * W, y: R() * H, v: .15 + R() * .25, p: R() * 6.28, c: R() < .5 ? '#7ff0d8' : '#c4fbff' }));
+    const flies = P.flies ? Array.from({ length: Math.max(14, W / 18 | 0) }, () => ({ x: R() * W, y: H * (.45 + R() * .5), p: R() * 6.28, s: .2 + R() * .4 })) : [];
+    const petals = Array.from({ length: Math.max(10, W / (P.sakura ? 14 : 30) | 0) }, () => ({ x: R() * W, y: R() * H, v: .15 + R() * .25, p: R() * 6.28, c: P.petals[R() * P.petals.length | 0] }));
+    return { sky, moon, far: far[0], mid: mid[0], near: near[0], trees, stars, clouds, flies, petals, born: null };
   }
 
   // a stepped, blocky ridge line, filled down to the bottom of the layer
@@ -2725,94 +2756,163 @@ fromHash();
       for (let x = 4; x < W; x += 7 + (R() * 9 | 0)) smallPine(g, x, topAt(x) + 1, 1 + (R() < .3 ? 1 : 0));
       return;
     }
-    // near layer: torii, stone lantern, pines and glowing blossom trees
+    // near layer: dungeon gate and torch are baked in; pines or sakura trees are drawn live so they can grow
     const tx = Math.round(W * (W < 220 ? .5 : .28));
-    torii(g, tx, topAt(tx) + 1, W < 220 ? 1 : 2);
-    toro(g, tx + (W < 220 ? 14 : 30), topAt(tx + 30) + 1);
+    dungeonGate(g, tx, topAt(tx) + 1, W < 220 ? 1 : 2);
+    torch(g, tx + (W < 220 ? 16 : 34), topAt(tx + 34) + 1);
     const spots = [];
-    for (let x = 6; x < W; x += 26 + (R() * 22 | 0)) if (Math.abs(x - tx) > 34) spots.push(x);
-    spots.forEach((x, i) => (i % 3 === 1 ? blossom : pine)(g, x, topAt(x) + 1, W < 220 ? 1 : 2, R));
+    for (let x = 6; x < W; x += 26 + (R() * 22 | 0)) if (Math.abs(x - tx) > 40) spots.push(x);
+    return spots.map((x, i) => {
+      const rec = recorder();
+      (P.sakura || i % 3 === 1 ? blossom : pine)(rec, x, topAt(x) + 1, W < 220 ? 1 : 2, R);
+      return rec.rects;
+    });
   }
 
   function smallPine(g, x, y, s) {
-    g.fillStyle = '#0b2f2e';
+    g.fillStyle = P.smallTree;
     g.fillRect(x, y - 6 * s, s, 6 * s);
     for (let i = 0; i < 3; i++) { const w = (5 - i * 1.4) * s | 0; g.fillRect(x - w, y - (3 + i * 2) * s, w * 2 + s, s); }
   }
   function pine(g, x, y, s, R) {
     const h = (26 + (R() * 10 | 0)) * s;
-    g.fillStyle = '#120f1a';
-    for (let i = 0; i < h; i += s) g.fillRect(x + Math.round(Math.sin(i / (6 * s)) * 2 * s), y - i, 2 * s, s);
+    g.fillStyle = P.trunk;
+    for (let i = 0; i < h; i += s) { g.t = i / h * .35; g.fillRect(x + Math.round(Math.sin(i / (6 * s)) * 2 * s), y - i, 2 * s, s); }
     for (let k = 0; k < 4; k++) {
       const py = y - h * (.45 + k * .17), dir = k % 2 ? 1 : -1, px = x + dir * (3 + k) * s, w = (16 - k * 3) * s;
-      g.fillStyle = '#0a3324'; g.fillRect(px - w / 2, py, w, 3 * s);
-      g.fillStyle = '#145a3b'; g.fillRect(px - w / 2 + s, py, w - 2 * s, s);
-      g.fillStyle = '#1f7a4f'; for (let q = 0; q < w; q += 4 * s) g.fillRect(px - w / 2 + q + s, py, s, s);
+      g.t = .35 + k * .16;
+      g.fillStyle = P.needles[0]; g.fillRect(px - w / 2, py, w, 3 * s);
+      g.fillStyle = P.needles[1]; g.fillRect(px - w / 2 + s, py, w - 2 * s, s);
+      g.fillStyle = P.needles[2]; for (let q = 0; q < w; q += 4 * s) g.fillRect(px - w / 2 + q + s, py, s, s);
     }
   }
   function blossom(g, x, y, s, R) {
     const h = 18 * s;
-    g.fillStyle = '#16111f';
-    g.fillRect(x, y - h, 2 * s, h);
+    g.fillStyle = P.bloomTrunk;
+    for (let i = 0; i < h; i += s) { g.t = i / h * .3; g.fillRect(x, y - i - s, 2 * s, s); }
+    g.t = .3;
     g.fillRect(x - 5 * s, y - h + 2 * s, 6 * s, s); g.fillRect(x + s, y - h + 4 * s, 7 * s, s);
-    const cols = ['#0f5a52', '#18806f', '#2fb59a', '#7ff0d8', '#c4fbff'];
+    // blossoms open from the middle of the crown outward
     for (let i = 0; i < 70; i++) {
       const a = R() * 6.28, r = Math.sqrt(R());
       const bx = x + Math.cos(a) * r * 13 * s, by = y - h - 4 * s + Math.sin(a) * r * 8 * s;
-      g.fillStyle = cols[Math.min(4, (1 - r) * 4 + R() * 1.6 | 0)];
+      g.fillStyle = P.bloom[Math.min(4, (1 - r) * 4 + R() * 1.6 | 0)];
+      g.t = .32 + r * .53 + R() * .15;
       g.fillRect(Math.round(bx / s) * s, Math.round(by / s) * s, s * 2, s * 2);
     }
   }
-  function torii(g, x, y, s) {
-    const dark = '#0c1820', edge = '#1e4650';
-    g.fillStyle = dark;
-    g.fillRect(x - 9 * s, y - 20 * s, 2 * s, 20 * s); g.fillRect(x + 7 * s, y - 20 * s, 2 * s, 20 * s);
-    g.fillRect(x - 13 * s, y - 22 * s, 26 * s, 2 * s); g.fillRect(x - 14 * s, y - 23 * s, 2 * s, s); g.fillRect(x + 12 * s, y - 23 * s, 2 * s, s);
-    g.fillRect(x - 11 * s, y - 17 * s, 22 * s, s); g.fillRect(x - s, y - 20 * s, 2 * s, 3 * s);
-    g.fillStyle = edge; g.fillRect(x - 13 * s, y - 22 * s, 26 * s, 1);
+  // two stone towers with battlements, a dark archway and an iron portcullis
+  function dungeonGate(g, x, y, s) {
+    g.fillStyle = P.stone;
+    g.fillRect(x - 13 * s, y - 24 * s, 7 * s, 24 * s); g.fillRect(x + 6 * s, y - 24 * s, 7 * s, 24 * s);
+    g.fillRect(x - 6 * s, y - 21 * s, 12 * s, 6 * s);
+    for (let k = -13; k < 13; k += 4) g.fillRect(x + k * s, y - 27 * s, 2 * s, 3 * s);
+    g.fillStyle = P.hole; g.fillRect(x - 6 * s, y - 15 * s, 12 * s, 15 * s); g.fillRect(x - 4 * s, y - 16 * s, 8 * s, s);
+    g.fillStyle = P.bars;
+    for (let k = -5; k <= 4; k += 3) g.fillRect(x + k * s, y - 15 * s, s, 13 * s);
+    g.fillRect(x - 6 * s, y - 11 * s, 12 * s, s); g.fillRect(x - 6 * s, y - 6 * s, 12 * s, s);
+    g.fillStyle = P.stoneEdge;
+    g.fillRect(x - 13 * s, y - 24 * s, 7 * s, 1); g.fillRect(x + 6 * s, y - 24 * s, 7 * s, 1); g.fillRect(x - 6 * s, y - 21 * s, 12 * s, 1);
   }
-  function toro(g, x, y) {
-    g.fillStyle = '#132327';
-    g.fillRect(x - 1, y - 6, 3, 6); g.fillRect(x - 3, y - 9, 7, 3); g.fillRect(x - 4, y - 11, 9, 2); g.fillRect(x - 1, y - 12, 3, 1);
-    g.fillStyle = '#ffcd6a'; g.fillRect(x - 1, y - 8, 3, 1);
+  function torch(g, x, y) {
+    g.fillStyle = P.torch;
+    g.fillRect(x, y - 8, 1, 8); g.fillRect(x - 2, y - 10, 5, 2);
+    g.fillStyle = P.flame; g.fillRect(x - 1, y - 12, 3, 2); g.fillRect(x, y - 13, 1, 1);
   }
 
-  let t = 0, last = 0, scrollP = 0;
-  function frame(now) {
-    if (now - last < 33) return requestAnimationFrame(frame);
-    last = now; t += .033;
-    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    const target = REDUCED ? 0 : Math.min(1, scrollY / max);
-    scrollP += (target - scrollP) * .12;
-    ctx.drawImage(sky, 0, 0);
-    stars.forEach(s => {
-      const a = .35 + .65 * Math.abs(Math.sin(t * (.6 + s.b) + s.p));
-      ctx.fillStyle = `rgba(${s.big ? '200,255,240' : '150,210,255'},${(a * (.4 + s.b * .6)).toFixed(2)})`;
+  let t = 0, last = 0, step = 1, scrollP = 0;
+  function paint(S, a, now) {
+    ctx.globalAlpha = a;
+    ctx.drawImage(S.sky, 0, 0);
+    S.stars.forEach(s => {
+      const b = .35 + .65 * Math.abs(Math.sin(t * (.6 + s.b) + s.p));
+      ctx.fillStyle = `rgba(${s.big ? '200,255,240' : '150,210,255'},${(b * (.4 + s.b * .6)).toFixed(2)})`;
       ctx.fillRect(s.x, s.y - scrollP * H * .05, 1, 1);
-      if (s.big && a > .8) { ctx.fillRect(s.x - 1, s.y - scrollP * H * .05, 3, 1); ctx.fillRect(s.x, s.y - 1 - scrollP * H * .05, 1, 3); }
+      if (s.big && b > .8) { ctx.fillRect(s.x - 1, s.y - scrollP * H * .05, 3, 1); ctx.fillRect(s.x, s.y - 1 - scrollP * H * .05, 1, 3); }
     });
-    ctx.drawImage(moon, Math.round(W * .8 - moon.width / 2), Math.round(H * .2 - moon.height / 2 + scrollP * H * .12));
-    ctx.drawImage(far, 0, Math.round(-scrollP * H * .12));
-    ctx.drawImage(mid, 0, Math.round(-scrollP * H * .24));
-    ctx.drawImage(near, 0, Math.round(-scrollP * H * .4));
+    ctx.drawImage(S.moon, Math.round(W * .8 - S.moon.width / 2), Math.round(H * .2 - S.moon.height / 2 + scrollP * H * .12));
+    ctx.fillStyle = 'rgba(255,250,246,.85)';
+    S.clouds.forEach(c => {
+      if (!REDUCED) c.x = c.x > W + c.w ? -c.w : c.x + c.v * step;
+      const x = Math.round(c.x), y = Math.round(c.y - scrollP * H * .06);
+      ctx.fillRect(x, y, c.w, 3); ctx.fillRect(x + 3, y - 2, c.w - 9, 2); ctx.fillRect(x + 6, y - 4, c.w / 3 | 0, 2);
+    });
+    ctx.drawImage(S.far, 0, Math.round(-scrollP * H * .12));
+    ctx.drawImage(S.mid, 0, Math.round(-scrollP * H * .24));
+    const oy = Math.round(-scrollP * H * .4);
+    ctx.drawImage(S.near, 0, oy);
+    // new trees turn solid early so you watch them grow, not fade
+    ctx.globalAlpha = Math.min(1, a * 2.5);
+    S.trees.forEach((tree, i) => {
+      const grow = S.born == null ? 1 : ease(clamp((now - S.born - 500 - i * Math.min(220, 2600 / S.trees.length)) / 2200));
+      for (const [x, y, w, h, c, th] of tree) if (grow >= th) { ctx.fillStyle = c; ctx.fillRect(x, y + oy, w, h); }
+    });
+    ctx.globalAlpha = a;
     if (!REDUCED) {
-      petals.forEach(p => {
-        p.y += p.v; p.x += Math.sin(t + p.p) * .25 - .1;
+      S.petals.forEach(p => {
+        p.y += p.v * step; p.x += (Math.sin(t + p.p) * .25 - .1) * step;
         if (p.y > H) { p.y = -2; p.x = Math.random() * W; }
         if (p.x < -2) p.x = W;
         ctx.fillStyle = p.c; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
       });
     }
-    flies.forEach(f => {
+    S.flies.forEach(f => {
       const fx = f.x + Math.sin(t * f.s + f.p) * 8, fy = f.y + Math.cos(t * f.s * 1.3 + f.p) * 5 - scrollP * H * .3;
-      const a = REDUCED ? .7 : Math.max(0, Math.sin(t * 1.5 + f.p * 3));
-      if (a < .05) return;
-      ctx.fillStyle = `rgba(110,255,170,${(a * .25).toFixed(2)})`; ctx.fillRect(Math.round(fx) - 1, Math.round(fy) - 1, 3, 3);
-      ctx.fillStyle = `rgba(200,255,200,${a.toFixed(2)})`; ctx.fillRect(Math.round(fx), Math.round(fy), 1, 1);
+      const b = REDUCED ? .7 : Math.max(0, Math.sin(t * 1.5 + f.p * 3));
+      if (b < .05) return;
+      ctx.fillStyle = `rgba(110,255,170,${(b * .25).toFixed(2)})`; ctx.fillRect(Math.round(fx) - 1, Math.round(fy) - 1, 3, 3);
+      ctx.fillStyle = `rgba(200,255,200,${b.toFixed(2)})`; ctx.fillRect(Math.round(fx), Math.round(fy), 1, 1);
     });
+    ctx.globalAlpha = 1;
+  }
+  function draw(now) {
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const target = REDUCED ? 0 : Math.min(1, scrollY / max);
+    scrollP += (target - scrollP) * .12 * step;
+    const k = old ? ease(clamp((now - cur.born) / 1600)) : 1;
+    if (old) paint(old, 1, now);
+    paint(cur, k, now);
+    if (old && k >= 1) old = null;
+  }
+  function frame(now) {
+    // full frame rate while a switch is playing, a calm 30fps the rest of the time
+    const busy = cur.born != null && now - cur.born < 6000;
+    if (!busy && now - last < 33) return requestAnimationFrame(frame);
+    step = Math.min(2, (now - last) / 33); last = now; t += .033 * step;
+    draw(now);
     if (!REDUCED) requestAnimationFrame(frame);
   }
-  build();
+  switchScene = () => {
+    old = REDUCED ? null : cur;
+    cur = build(theme());
+    if (REDUCED) draw(performance.now()); else cur.born = performance.now();
+  };
+  cur = build(theme());
   requestAnimationFrame(frame);
-  addEventListener('resize', () => { clearTimeout(window.__sc); window.__sc = setTimeout(() => { build(); if (REDUCED) requestAnimationFrame(frame); }, 150); });
+  addEventListener('resize', () => { clearTimeout(window.__sc); window.__sc = setTimeout(() => { old = null; cur = build(theme()); if (REDUCED) requestAnimationFrame(frame); }, 150); });
+})();
+
+/* ---------- day / night switch ---------- */
+(function themeSwitch() {
+  const root = document.documentElement, btn = document.getElementById('modeBtn');
+  let fade;
+  const sync = () => {
+    const day = root.dataset.theme === 'day';
+    btn.setAttribute('aria-label', day ? 'Switch to night mode' : 'Switch to day mode');
+    btn.querySelector('span').textContent = day ? 'Night' : 'Day';
+  };
+  const apply = () => {
+    if (root.dataset.theme === 'day') delete root.dataset.theme; else root.dataset.theme = 'day';
+    try { localStorage.setItem('dojo-java.theme', root.dataset.theme || 'night'); } catch (e) {}
+    switchScene(); sync();
+  };
+  btn.addEventListener('click', () => {
+    btn.classList.remove('spin'); void btn.offsetWidth; btn.classList.add('spin');
+    if (REDUCED) return apply();
+    // the browser crossfades a snapshot of the page on the GPU; the live scene keeps growing its trees underneath
+    if (document.startViewTransition) return document.startViewTransition(apply);
+    root.classList.add('theme-fade'); clearTimeout(fade); fade = setTimeout(() => root.classList.remove('theme-fade'), 1700);
+    apply();
+  });
+  sync();
 })();

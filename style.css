@@ -1,4 +1,4 @@
-/* Layout: fixed pixel-art night scene behind a single centered column; the roadmap is a winding trail of lantern stops per world; lessons open as a terminal window. Single committed dark look. */
+/* Layout: fixed pixel-art night scene behind a single centered column; the roadmap is a winding trail of lantern stops per world; lessons open as a terminal window. Night by default; [data-theme=day] swaps in a sakura palette (overrides at the end of this file). */
 :root{
   color-scheme: dark;
   --night:#040a14; --deep:#071424; --panel:#0a1a2b; --panel-2:#0d2236; --well:#051020;
@@ -62,7 +62,7 @@ a{color:var(--sky)}
 .cursor{display:inline-block;width:.6em;height:1.05em;background:var(--leaf);vertical-align:-2px;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .hero-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.flow{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;font-family:var(--f-term);font-size:1.15rem;color:var(--faint)}
+.flow{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center;font-family:var(--f-term);font-size:1.15rem;color:var(--dim);text-shadow:0 0 4px var(--night),0 0 2px var(--night),0 0 1px var(--night)}
 .flow span{color:var(--ink);background:rgba(13,34,54,.85);padding:1px 8px;border:1px solid var(--line)}
 
 /* worlds */
@@ -101,7 +101,7 @@ a{color:var(--sky)}
 .stop.gate .badge{right:20px}
 
 footer{padding-block:40px 60px;color:var(--faint);font-size:.9rem;display:grid;gap:12px;justify-items:start}
-footer p{margin:0;max-width:60ch}
+footer p{margin:0;max-width:60ch;color:var(--dim);text-shadow:0 0 4px var(--night),0 0 2px var(--night),0 0 1px var(--night)}
 
 /* lesson window */
 .lesson{position:fixed;inset:0;z-index:40;background:rgba(2,6,12,.8);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
@@ -206,3 +206,52 @@ footer p{margin:0;max-width:60ch}
   *,*::before,*::after{animation:none!important;transition:none!important}
   .stop.pre{opacity:1;transform:translateX(var(--x))!important}
 }
+
+/* day / night switch */
+.mode{--notch:4px;display:flex;align-items:center;gap:8px;font-family:var(--f-pixel);font-weight:700;font-size:.85rem;color:var(--ink);background:var(--panel-2);border:0;padding:.45em .8em .6em;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 0 0 2px var(--line-2);transition:transform .12s,filter .15s}
+.mode:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.mode i{width:14px;height:14px;border-radius:50%;background:transparent;box-shadow:inset -5px -2px 0 0 var(--ice);transition:background 1.2s cubic-bezier(.65,0,.35,1),box-shadow 1.2s cubic-bezier(.65,0,.35,1),border-radius 1.2s cubic-bezier(.65,0,.35,1)}
+[data-theme=day] .mode i{border-radius:3px;background:var(--lantern);box-shadow:0 0 0 3px rgba(217,146,46,.3)}
+.mode.spin i{animation:spin 1.2s cubic-bezier(.65,0,.35,1)}
+@keyframes spin{40%{transform:rotate(200deg) scale(.6)}100%{transform:rotate(360deg) scale(1)}}
+.d-only,[data-theme=day] .n-only{display:none}
+[data-theme=day] .d-only{display:inline}
+::view-transition-old(root),::view-transition-new(root){animation-duration:1.6s;animation-timing-function:cubic-bezier(.65,0,.35,1)}
+.theme-fade .top,.theme-fade .world-head,.theme-fade .term{transition:background-color 1.6s cubic-bezier(.65,0,.35,1),color 1.6s cubic-bezier(.65,0,.35,1)}
+@media (max-width:560px){.mode span{display:none}}
+
+/* day: sakura, beige paper, ink black, sky blue, matcha green, bark brown */
+:root[data-theme=day]{
+  color-scheme: light;
+  --night:#f6ece0; --deep:#fbf4ea; --panel:#f3e6d6; --panel-2:#ecdcc8; --well:#fffaf3;
+  --line:#dcc6b0; --line-2:#b8957a;
+  --ink:#2a1f1d; --dim:#5e4a42; --faint:#8d766a;
+  --leaf:#6a9e5e; --leaf-dk:#41703b; --sky:#e0789a; --sky-dk:#a84868; --ice:#2f5f8a;
+  --lantern:#d9922e; --oops:#cf4a3c;
+}
+[data-theme=day] .scan{opacity:.25}
+[data-theme=day] b,[data-theme=day] .story p:first-child,[data-theme=day] .x:hover{color:var(--ink)}
+[data-theme=day] .btn:not(.ghost):not(.sky):not(.warn){--b:var(--sky);--bd:var(--sky-dk);color:#2a0e18}
+[data-theme=day] .btn.ghost{--bd:#cdb197}
+[data-theme=day] .logo{text-shadow:2px 2px 0 #f3c3d1}
+[data-theme=day] .hero h1{text-shadow:4px 4px 0 #f3c3d1,0 0 28px rgba(224,120,154,.25)}
+[data-theme=day] .hero h1 em{color:var(--sky)}
+[data-theme=day] .top{background:rgba(246,236,224,.86)}
+[data-theme=day] .term,[data-theme=day] .world-head{background:rgba(255,250,243,.92);box-shadow:6px 6px 0 rgba(90,60,45,.22)}
+[data-theme=day] .flow span,[data-theme=day] .label{background:rgba(255,250,243,.85)}
+[data-theme=day] .ex,[data-theme=day] .wild li{background:rgba(255,250,243,.75)}
+[data-theme=day] .trail .path-base{stroke:#c9ad93}
+[data-theme=day] .stop.started .node,[data-theme=day] .tab[aria-selected="true"]{background:#fbe0e8;color:var(--ink)}
+[data-theme=day] .stop.gate .node{background:#3a2c2a;color:#ffcd6a}
+[data-theme=day] .lesson{background:rgba(70,45,40,.45)}
+[data-theme=day] .win{box-shadow:8px 8px 0 rgba(90,60,45,.28),0 0 60px rgba(224,120,154,.15)}
+[data-theme=day] .code pre{color:#3a2d28}
+[data-theme=day] .t-kw{color:#2f6fb0}[data-theme=day] .t-str{color:#3d8a4a}[data-theme=day] .t-type{color:#2a5a7a}[data-theme=day] .t-ann{color:#c0507a}[data-theme=day] .t-fn{color:#7a4f2a}[data-theme=day] .t-com{color:#9a8577}
+[data-theme=day] .gap,[data-theme=day] .ans input,[data-theme=day] .ex textarea{background:var(--well);color:var(--ink)}
+[data-theme=day] .gap:focus{background:#fdeef2}
+[data-theme=day] .hint{color:#7a5320}
+[data-theme=day] .opt.right{background:#dcefd6;color:var(--ink)}
+[data-theme=day] .opt.wrong{background:#f8dcd8}
+/* day: the intro text gets a light glow so it stays readable over the blossoms */
+[data-theme=day] .hero p.lede{text-shadow:0 0 6px rgba(255,250,243,.95),0 0 2px rgba(255,250,243,.95)}
+[data-theme=day] footer p,[data-theme=day] .flow{color:var(--ink)}

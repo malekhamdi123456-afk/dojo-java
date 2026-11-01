@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="A Duolingo-style Java course: 34 bite-size lessons from Hello World to Streams, in a pixel-art night dojo.">
+<meta name="description" content="A Duolingo-style Java course: 34 bite-size lessons from Hello World to Streams, in a pixel-art dojo, by night or under sakura.">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Dojo Java</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=VT323&family=Lexend:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
+<script src="theme.js"></script>
 </head>
 <body>
 <canvas id="scene" aria-hidden="true"></canvas>
@@ -21,13 +22,14 @@
       <div class="logo">DOJO<span>//</span>JAVA</div>
       <div class="stat xp" title="Experience points"><i></i><strong id="xpVal">0</strong> xp</div>
       <div class="stat" title="Stops completed"><i></i><strong id="doneVal">0</strong>/<span id="totalVal">0</span></div>
+      <button class="mode px" id="modeBtn" type="button" aria-label="Switch to day mode"><i></i><span>Day</span></button>
       <button class="btn small px" id="topGo" type="button">Continue</button>
     </div>
   </header>
 
   <main>
     <section class="wrap hero">
-      <div class="kicker">phases 01 to 04 · the night path</div>
+      <div class="kicker">phases 01 to 04 · the <span class="n-only">night</span><span class="d-only">sakura</span> path</div>
       <h1>Dojo <em>Java</em></h1>
       <p class="lede">The first four phases of your Java roadmap, cut into tiny lessons. Walk the path in order or jump to any lantern you like. Every lesson is the same rhythm, and your progress stays saved in this browser.</p>
       <div class="term px">
