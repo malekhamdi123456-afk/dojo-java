@@ -27,9 +27,9 @@ System.out.print("line");`, n: `<code>println</code> prints, then jumps to a new
 java Hello         // runs it`, n: `What happens in the terminal. Your IDE (IntelliJ) does both steps when you press the green play button.` }
     ],
     ex: [
-      { t: 'fill', p: `Finish the program so it prints <code>Welcome to the trail</code>.`, c: `public class Trail {
+      { t: 'fill', p: `Finish the program so it prints <code>Welcome to the dojo</code>.`, c: `public class Dojo {
   public static void [[main]](String[] args) {
-    System.out.[[println]]("Welcome to the trail");
+    System.out.[[println]]("Welcome to the dojo");
   }
 }`, h: `The front-door method has a 4-letter name. The print that jumps to a new line ends with "ln".` },
       { t: 'out', p: `What does this print?`, c: `System.out.print("Ja");
@@ -2120,7 +2120,7 @@ const BY_ID = Object.fromEntries(ALL.map(l => [l.id, l]));
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- saved progress ---------- */
-const KEY = 'java-night-trail.v1';
+const KEY = 'dojo-java.v1';
 let S = { xp: 0, steps: {}, ex: {}, q: {}, builds: {}, got: {} };
 // Saved data is treated as untrusted: anything that doesn't match the expected shape is dropped.
 function cleanState(d) {
@@ -2325,7 +2325,7 @@ function openLesson(id, step) {
   curStep = Math.max(0, typeof step === 'string' ? steps.indexOf(step) : (step || 0));
   setText('lessonTag', (l.gate ? 'gate ' + (l.pi + 1) : 'stop ' + l.num) + ' · ' + l.phase.world);
   document.getElementById('lessonTitle').innerHTML = l.title;
-  setText('lessonPath', `~/trail/phase-${l.pi + 1}/${l.id.split('-').slice(1).join('-')}.java`);
+  setText('lessonPath', `~/dojo/phase-${l.pi + 1}/${l.id.split('-').slice(1).join('-')}.java`);
   LW.hidden = false;
   document.body.style.overflow = 'hidden';
   try { if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id); } catch (e) {}
