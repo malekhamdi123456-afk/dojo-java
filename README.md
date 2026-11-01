@@ -2,7 +2,7 @@
 
 A Duolingo-style Java course in a single web page: 34 bite-size stops covering the first four phases of a Java roadmap, laid out as a pixel-art night trail.
 
-**Live:** https://YOUR-USERNAME.github.io/java-night-trail/
+**Live:** https://malekhamdi123456-afk.github.io/java-night-trail/
 
 ## What's inside
 
@@ -28,3 +28,12 @@ No build step. Open `index.html` in a browser.
 ## Tech
 
 Plain HTML, CSS and JavaScript in one file. The night scene is drawn on a canvas at low resolution and scaled up for the pixel look.
+
+## Security
+
+The site is fully static: no database, no server code, no forms, no network requests from the page. Progress lives only in each visitor's browser.
+
+- `_headers` sets a strict Content-Security-Policy on Netlify: scripts load only from this site, no inline scripts, no eval, nothing can embed the page in a frame, and the page can't send data anywhere.
+- Plus `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security` and cross-origin isolation headers.
+- Saved progress is validated on load, so tampered localStorage data is ignored instead of breaking the page.
+- Everything the visitor types is escaped before it's shown.
