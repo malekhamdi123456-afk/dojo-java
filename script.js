@@ -181,7 +181,13 @@ int seconds = total [[%]] 60;`, h: `How many full hours fit? That's division. Wh
 };`, n: `A switch can also hand back a value. Note the <code>;</code> at the very end.` }
     ],
     ex: [
-      { t: 'fill', p: `Real calendar rule: a year is a leap year if it's divisible by 4 but not by 100, unless it's also divisible by 400.`, c: `boolean leap = (year % 4 == 0 [[&&]] year % 100 != 0) [[||]] year % 400 == 0;`, h: `"…and not by 100" needs AND. "…or by 400" needs OR.` },
+      { t: 'fill', p: `Grade a test: 90 or more is an A, 70 or more is a B, anything lower is a C. Fill in the missing keywords.`, c: `if (score >= 90) {
+  grade = 'A';
+} [[else if]] (score >= 70) {
+  grade = 'B';
+} [[else]] {
+  grade = 'C';
+}`, h: `The middle check means "otherwise, if…". The last path has no question at all: it catches everything that's left.` },
       { t: 'out', p: `What does this print?`, c: `int t = 22;
 if (t > 25) System.out.println("A");
 else if (t > 20) System.out.println("B");
@@ -195,14 +201,14 @@ else System.out.println("C");`, a: ['B'], h: `Is 22 bigger than 25? Bigger than 
     ],
     quiz: [
       { q: `When does the <code>else</code> block run?`, o: ['Always', 'When the if question is false', 'When the if question is true', 'Never'], a: 1, w: `else is the "otherwise" path.` },
-      { q: `Which symbol means AND?`, o: ['&&', '||', '!', '=='], a: 0, w: `<code>&&</code> is and, <code>||</code> is or, <code>!</code> is not.` },
+      { q: `In a switch, what does <code>default</code> do?`, o: ['Runs before every case', 'Catches any value no case matched', 'Stops the program', 'Picks the first case'], a: 1, w: `<code>default</code> is the "none of the above" path, like the final <code>else</code> in an if chain.` },
       { q: `Does an arrow switch (<code>-></code>) need <code>break</code>?`, o: ['Yes, always', 'No', 'Only for Strings', 'Only for default'], a: 1, w: `Arrow cases never fall through to the next case, so no break is needed.` }
     ],
     wild: [
       `Automatic emergency braking asks "is something too close?" many times every second.`,
       `Your feed decides if a post is shown with dozens of if checks: blocked? seen? too old?`
     ],
-    fact: `The year 2000 was a leap year but 1900 was not. That 400 rule exists because Earth takes about 365.2422 days to go around the Sun, not exactly 365.25.`
+    fact: `The year 2000 was a leap year but 1900 was not: years ending in 00 skip the leap day unless they divide by 400. That rule exists because Earth takes about 365.2422 days to go around the Sun, not exactly 365.25, and calendar code checks it with exactly this kind of if.`
   },
   {
     id: 'p1-loops', icon: 'for', title: 'Loops',
@@ -2424,7 +2430,9 @@ function exBadge(id) {
   if (helped(id)) return '<span class="ex-state peek">no xp</span>';
   return '';
 }
-function fillSolution(c) { return c.replace(/\[\[(.+?)\]\]/g, (m, a) => a.split('|')[0]); }
+// a gap's accepted answers are separated by a single | (so an answer like || stays whole)
+const altsOf = a => a.split(/(?<!\|)\|(?!\|)/);
+function fillSolution(c) { return c.replace(/\[\[(.+?)\]\]/g, (m, a) => altsOf(a)[0]); }
 
 function renderEx(l, ex, i) {
   const id = exId(l, i), st = S.ex[id];
@@ -2435,7 +2443,7 @@ function renderEx(l, ex, i) {
     const parts = ex.c.split(/\[\[(.+?)\]\]/);
     const inner = parts.map((p, j) => {
       if (j % 2 === 0) return hl(p);
-      const alts = p.split('|'), w = Math.max(...alts.map(a => a.length)) + 2;
+      const alts = altsOf(p), w = Math.max(...alts.map(a => a.length)) + 2;
       const val = st === 'solved' ? alts[0] : '';
       return `<input class="gap ${st === 'solved' ? 'ok' : ''}" id="${id}-g${k++}" data-ans="${esc(p)}" value="${esc(val)}" style="width:${w}ch" maxlength="${MAX_ANSWER}" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="blank ${k}">`;
     }).join('');
@@ -2508,7 +2516,7 @@ function checkEx(id) {
     const gaps = [...bodyEl.querySelectorAll(`[data-ex="${id}"] .gap`)];
     let ok = 0;
     gaps.forEach(g => {
-      const good = g.dataset.ans.split('|').some(a => tight(a) === tight(g.value));
+      const good = g.value.trim() !== '' && altsOf(g.dataset.ans).some(a => tight(a) === tight(g.value));
       g.classList.toggle('ok', good); g.classList.toggle('bad', !good && g.value.trim() !== '');
       if (good) ok++;
     });

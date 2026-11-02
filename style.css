@@ -15,6 +15,8 @@
 [hidden]{display:none!important}
 html{background:var(--night)}
 body{background:var(--night);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* code must show == != <= -> exactly as typed: no ligatures merging them into one symbol */
+body,input,textarea,button,pre,code{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--night)}
 #scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 .scan{position:fixed;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.14) 2px 3px);mix-blend-mode:multiply}
