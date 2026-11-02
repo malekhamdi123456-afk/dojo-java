@@ -2745,8 +2745,14 @@ const ART = (() => {
   heartPx.sort((p, q) => p.a - q.a).forEach((p, i, all) => p.shard = Math.floor(i / all.length * 10));
   const isHeart = (x, y) => heartPx.some(p => p.x === x && p.y === y);
   const isEdge = (x, y) => isHeart(x, y) && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => !isHeart(x + dx, y + dy));
+  heartPx.forEach(p => { p.edge = isEdge(p.x, p.y); p.core = Math.hypot(p.x - 11.5, p.y - 14.5) < 2.2; });
   
-  const mix = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+  const mixed = new Map();
+  const mix = (a, b, t) => {
+    const key = a + b + Math.round(t * 40);
+    if (!mixed.has(key)) { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b), q = Math.round(t * 40) / 40; mixed.set(key, '#' + A.map((v, i) => Math.round(v + (B[i] - v) * q).toString(16).padStart(2, '0')).join('')); }
+    return mixed.get(key);
+  };
   
   // draw the shade at pixel size P; stage 0..10; t seconds for the pulse; fx for the freedom animation
   function drawShade(g, P, stage, t, ox = 0, oy = 0, fx = null) {
@@ -2773,12 +2779,13 @@ const ART = (() => {
       g.save();
       g.shadowColor = '#4fb8ff';
       g.shadowBlur = P * (1.2 + stage * .45) * pulse * (fx ? fx.boost : 1);
+      const byColor = {};
       heartPx.forEach(p => {
         if (p.shard >= stage) return;
-        const core = Math.hypot(p.x - 11.5, p.y - 14.5) < 2.2;
-        g.fillStyle = core ? '#d6f6ff' : isEdge(p.x, p.y) ? '#2f86e6' : '#6cc7ff';
-        g.fillRect(ox + p.x * P, oy + p.y * P, P, P);
+        const c = p.core ? '#d6f6ff' : p.edge ? '#2f86e6' : '#6cc7ff';
+        (byColor[c] = byColor[c] || []).push(p);
       });
+      for (const c in byColor) { g.fillStyle = c; g.beginPath(); byColor[c].forEach(p => g.rect(ox + p.x * P, oy + p.y * P, P, P)); g.fill(); }
       g.restore();
     }
   }
@@ -3161,15 +3168,17 @@ function renderBuddy() {
   document.getElementById('buddyFree').hidden = !alive;
   const cast = document.getElementById('buddyCast');
   cast.hidden = form === 'ghost'; cast.textContent = form === 'ghost' ? '' : 'Cast ' + SKILLS[form];
-  drawBuddy(0);
+  drawBuddy(0, true); // a real change: redraw everything, visible or not
 }
 // the card's sprite breathes: the heart pulses, the hero bobs. Paused when the tab is hidden or motion is reduced.
-function drawBuddy(t) {
-  const st = stageOf(S.xp), form = st >= ALIVE && S.form ? S.form : 'ghost';
-  ART.cardFrame(document.getElementById('buddyArt').getContext('2d'), 96, form, st, t, 4);
+const onScreen = el => { if (el.offsetParent === null) return false; const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+function drawBuddy(t, all) {
+  const st = stageOf(S.xp), form = st >= ALIVE && S.form ? S.form : 'ghost', card = document.getElementById('buddyArt');
+  const covered = !all && !LW.hidden; // an open lesson hides the card and the map
+  if (all || (!covered && onScreen(card))) ART.cardFrame(card.getContext('2d'), 96, form, st, t, 4);
   if (!INTRO.hidden) ART.cardFrame(document.getElementById('introArt').getContext('2d'), 144, 'ghost', st, t, 6);
-  document.querySelectorAll('[data-art]').forEach(cv => ART.cardFrame(cv.getContext('2d'), 96, cv.dataset.art, ALIVE, t, 4));
-  if (COMP.isConnected) ART.palFrame(COMP.getContext('2d'), form, st, t, !!palWalk && !palWalk.warp, palFace);
+  document.querySelectorAll('[data-art]').forEach(cv => { if (all || onScreen(cv)) ART.cardFrame(cv.getContext('2d'), 96, cv.dataset.art, ALIVE, t, 4); });
+  if (COMP.isConnected && (all || palWalk || (!covered && onScreen(COMP)))) ART.palFrame(COMP.getContext('2d'), form, st, t, !!palWalk && !palWalk.warp, palFace);
 }
 if (!REDUCED) {
   let lastCard = 0;
@@ -3223,7 +3232,7 @@ function arenaEnd() {
     setText('arenaLine', 'Looka, the storm blade, or Suzi, the petal comet.');
     document.getElementById('arenaPick').hidden = false;
     ART.duo(arenaG, 400, 260);
-    drawBuddy(0);
+    drawBuddy(0, true);
   } else {
     document.getElementById('arenaReplay').hidden = false;
     if (arena.kind === 'skill') ART.heroFrame(arenaG, arena.who, -1, 0, 400, 260, { trail: [], sp: [] }, 0);
@@ -3318,7 +3327,7 @@ function palGo(id, done) {
   const pts = stops.map(palMapSpot);
   mapEl.appendChild(COMP);
   COMP.style.left = pts[0].x + 'px'; COMP.style.top = pts[0].y + 'px';
-  palWalk = { to: id, pts, warp, done, t0: performance.now(), seg: warp ? 500 : Math.min(320, 1300 / (pts.length - 1)) };
+  palWalk = { to: id, pts, warp, done, t0: performance.now(), seg: warp ? 360 : Math.min(200, 650 / (pts.length - 1)) };
   requestAnimationFrame(palStep);
 }
 function palStep(now) {
